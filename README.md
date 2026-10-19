@@ -63,6 +63,7 @@
 | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Trust assumptions, adversarial attack vectors per contract family, and pause/emergency-response pointers |
 | [docs/AUDIT_LEDGER.md](docs/AUDIT_LEDGER.md) | Tamper-evident hash-chained ledger for privileged/financial events: hashing rules, verification, export, failure modes, and recovery runbook |
 | [docs/SYNTHETIC_JOURNEY_MONITOR.md](docs/SYNTHETIC_JOURNEY_MONITOR.md) | Runnable fund/quote/settle synthetic monitor, failure attribution, and recovery guidance |
+| [docs/RECONCILIATION_JOB.md](docs/RECONCILIATION_JOB.md) | Projection reconciliation job: comparing canonical truth with derived state, dry-run safety, and idempotent repair |
 - Storage Layout
 - Documentation
 - Contribution Guide
