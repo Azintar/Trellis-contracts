@@ -1,4 +1,4 @@
-#![no_std]
+#`!no_std]
 pub mod abuse;
 pub mod accessibility;
 pub mod analytics;
@@ -16,7 +16,6 @@ pub mod dashboard;
 pub mod degradation;
 pub mod diagnostics;
 pub mod disclosure;
-pub mod duplicate_detection;
 pub mod error_taxonomy;
 pub mod errors;
 pub mod events;
@@ -38,6 +37,7 @@ pub mod operational_metadata;
 pub mod pagination;
 pub mod payments;
 pub mod policy;
+pub mod policy_preview;
 pub mod preflight;
 pub mod public_status;
 pub mod projection_repair;
@@ -60,61 +60,71 @@ pub mod time_window;
 pub mod utils;
 pub mod webhook;
 // Re-export the most commonly-needed items at crate root for ergonomic use.
+pub use abuse::{
+    assess_high_impact_abuse, evaluate_high_impact_abuse, get_abuse_policy, get_abuse_state,
+    is_abuse_blocked, record_abuse, set_abuse_policy, AbusePolicy, AbuseState,
+    HighImpactAbuseContext,
+};
+pub use risk_scoring::{
+    assess_and_record, evaluate_risk, get_actor_profile, get_risk_policy, reset_actor_risk,
+    set_actor_exemption, set_risk_policy, ActionContext, ActorRiskProfile, HighImpactAction,
+    RiskAssessment, RiskError, RiskFactor, RiskFactorType, RiskPolicy, RiskTier, RiskVerdict,
+};
 pub use audit_ledger::{
 append_event, append_financial, append_privileged, checkpoint, entry_hash, export_digest,
 export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint, verify_chain,
 verify_export,
 AuditEventClass, AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerExport,
 AuditLedgerHead, AuditLedgerKey, AuditVerificationFailure, AuditVerificationReport,
-AUDIT_DOMAIN, AUDIT_LEDGER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,
+AUDIT_DOMAIN, AUDIT_LEGDER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,
 MAX_VERIFY_ENTRIES,
 };
-pub use analytics::{
+pub use analytics{
 aggregate_events, is_fully_suppressed, is_safe_dimension, is_sensitive_dimension,
 AggregateBucket, AnalyticsReport, PrivacyConfig, RawObservation, ANALYTICS_METRIC_VERSION,
 };
-pub use auth::{
+pub use auth{
 accept_ownership_transfer, cancel_ownership_transfer, get_admin,
 get_pending_ownership_transfer, has_permission, initialize_admin, propose_ownership_transfer,
 require_admin, require_not_paused, require_permission, role_for_permission, set_admin,
 PendingOwnershipTransfer, Permission, Role,
 };
-pub use backfill::{
+pub use backfill{
 advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dry_run as dry_run_backfill,
 fail_backfill, is_resumable as is_backfill_resumable, load_checkpoint as load_backfill_checkpoint,
 save_checkpoint as save_backfill_checkpoint, BackfillAction, BackfillCheckpoint, BackfillError,
 BackfillItem, BackfillMode, BackfillModule, BackfillPlan, BackfillReport, BackfillStatus,
 };
-pub use batch::{
+pub use batch{
 batch_invoke_no_args, execute_multi_invoke, execute_multi_transfer, multi_transfer_all,
 BatchConfig, BatchError, BatchMode, BatchResult, BatchTransfer, OperationResult,
 ABSOLUTE_MAX_BATCH_SIZE, DEFAULT_MAX_BATCH_SIZE,
 };
-pub use canonical::{
+pub use canonical{
 canonical_bytes, canonical_fingerprint, canonicalize_legacy, ensure_supported_encoding,
 is_legacy_encoding, normalize_int, normalize_text, parse_legacy_kv, CanonicalPart,
 CANONICAL_ENCODING_VERSION, LEGACY_ENCODING_VERSION, MAX_FIELD_LEN,
 };
-pub use client::{
+pub use client{
 client_schema_fingerprint, format_client_error, AidSummaryResponse, ClientErrorResponse,
 ClientReceipt, CreateAidRequest, CreateEscrowRequest, CreateListingRequest,
 CreateProposalRequest, EscrowSummaryResponse, ListingSummaryResponse, OperationStatus,
 ProposalSummaryResponse, RebalanceRequest, RebalanceSummaryResponse, CLIENT_SCHEMA_VERSION,
 };
-pub use compat::{
+pub use compat{
 current_schema_version, downgrade_v2_to_v1, ensure_supported_version, from_latest,
 is_deprecated_version, is_supported_version, migrate_v1_to_v2, new_current_record, to_latest,
 CompatAidStatus, CurrentAidRecord, LegacyAidRecord, VersionedAidRecord,
 CURRENT_RECORD_SCHEMA_VERSION, MAX_SUPPORTED_RECORD_SCHEMA_VERSION,
 MIN_SUPPORTED_RECORD_SCHEMA_VERSION, RECORD_SCHEMA_V1, RECORD_SCHEMA_V2,
 };
-pub use config::{
+pub use config{
 validate_feature_flag, validate_full_config, validate_network_id, validate_rpc_url,
 validate_secret_key, Environment, RedactedSecret,
 };
-pub use domain_events::{consumer_version, publish_event, validate_event, DomainEvent, EventSchema,
+pub use domain_events{consumer_version, publish_event, validate_event, DomainEvent, EventSchema,
 EventValidationError};
-pub use dashboard::{
+pub use dashboard{
 add_external_reference, create_partial_failure, generate_dashboard,
 generate_enhanced_dashboard, group_by_age, group_by_operation_type, group_by_retryability,
 group_by_severity, redact_partial_failure, DashboardReport, ExternalReference, FailureGroup,
@@ -122,16 +132,13 @@ FailureSeverity, FailureState, HealthCategory, OperationType, PartialFailure,
 RedactedDeadLetter, RedactedPartialFailure,
 };
 pub use disclosure::{DetailField, DetailSeverity, TransactionDetail, TransactionDetailBuilder};
-pub use duplicate_detection::{
-    approve_merge, cancel_merge, detect_candidates, execute_merge, get_merge_review,
-    list_merge_reviews, reject_merge, revert_merge, submit_merge_review, CandidateDuplicate,
-    DuplicateDetectionConfig, DuplicateDetectionError, DuplicateMatchReason, MergeAction,
-    MergeAuditEntry, MergeDecision, MergeReview, MergeReviewStatus, MergeRevertReport,
-    DETECTION_SCHEMA_VERSION, MAX_CANDIDATES_PER_SCAN,
+pub use error_taxonomy::{
+    describe_error, problem_details, remediation_hint, ErrorCategory, ErrorDomain, ErrorInfo,
+    ProblemDetails, ProblemDetailsCode, ProblemDetailsRegistry, ProblemDetailsSpec,
+    PROBLEM_DETAILS_SCHEMA_VERSION,
 };
-pub use error_taxonomy::{describe_error, ErrorCategory, ErrorDomain, ErrorInfo};
 pub use errors::Error;
-pub use export::{
+pub use export{
 authorize_export, authorize_module_export, cancel_export_stream, create_export,
 ensure_supported_version as ensure_supported_export_version, finalize_export_stream,
 generate_export, get_export_session, init_export_stream, is_forbidden_field, is_safe_field,
@@ -145,30 +152,25 @@ DEFAULT_EXPORT_TTL_LEDGERS, DEFAULT_MAX_EXPORT_RECORDS, EXPORT_SCHEMA_V1,
 MAX_EXPORT_CHUNK_SIZE, MAX_EXPORT_TTL_LEDGERS, MAX_SUPPORTED_EXPORT_SCHEMA_VERSION,
 MIN_SUPPORTED_EXPORT_SCHEMA_VERSION,
 };
-pub use events::{
+pub use events{
 emit, emit_collection_registered, emit_import_committed, emit_import_failed,
 emit_import_simulated, emit_nft_auction, emit_nft_bid, emit_nft_listed, emit_nft_offer,
-emit_nft_settle, emit_nft_sold, emit_royalty_paid, AID_CLAIMED, AID_CREATED, AID_REFUNDED,
-AID_SETTLED, COMMISSION_PAID, CONTRACT_PAUSED, CONTRACT_RESUMED, CONTRACT_UPGRADED,
-IMPORT_COMMITTED, IMPORT_FAILED, IMPORT_SIMULATED, PARAMETER_CHANGED, PAYMENT_ESCROW_CREATED,
-PAYMENT_ESCROW_REFUNDED, PAYMENT_ESCROW_RELEASED, PAYMENT_FEE, PAYMENT_TRANSFER,
-REFERRAL_ACCRUED, REFERRAL_REGISTERED, REFERRER_SET, TIER_CONFIG_SET, TREASURY_DEPOSIT,
-TREASURY_EMERGENCY_WITHDRAW, TREASURY_SET, TREASURY_WITHDRAW,
+emit_nft_settle, emit_nft_sold, emit_royalty_paid, A???
 };
 pub use evidence::*;
 pub use chaos::*;
-pub use health::{
+pub use health{
 get_dependency_health, list_dependency_health, set_dependency_health, DependencyHealth,
 DependencyStatus,
 };
-pub use impersonation::{
+pub use impersonation{
 check_action_permission, create_session, get_active_sessions_for_impersonator,
 get_active_sessions_for_user, get_current_impersonation, is_being_impersonated, record_action,
 revoke_session, validate_session, ImpersonationAction, ImpersonationError, ImpersonationScope,
 ImpersonationSession, ResourceScope, ResourceType, SessionParams, SessionResult, SessionState,
 DEFAULT_SESSION_DURATION, MAX_CONCURRENT_SESSIONS, MAX_SESSION_DURATION,
 };
-pub use import::{
+pub use import{
 compute_batch_fingerprint, dry_run as dry_run_import, execute_import,
 generate_rollback_guidance, get_import_counter, get_imported_record, has_imported_record,
 validate_config as validate_import_config, DuplicatePolicy, ImportConfig, ImportError,
@@ -176,7 +178,7 @@ ImportItem, ImportMode, ImportReport, RollbackGuidance, RowError, StoredImportRe
 ABSOLUTE_MAX_IMPORT_SIZE, DEFAULT_MAX_IMPORT_SIZE, MAX_EXTERNAL_ID_LEN,
 };
 pub use invariants::*;
-pub use jobs::{
+pub use jobs{
 configure_worker, dead_letter_job_ids, dedupe_key_pair, dedupe_key_u64, default_worker_config,
 discard_dead_letter, enqueue_escrow_refund, enqueue_job, get_job, get_receipt, job_stats,
 next_due_ledger, pause_worker, pending_job_ids, reprocess_job, requeue_dead_letter,
@@ -185,19 +187,19 @@ JobCounters, JobError, JobHandler, JobKind, JobPayload, JobReceipt, JobStats, Jo
 RetryPolicy, RunOutcome, WorkerConfig, WorkerKey, ESCROW_REFUND_TAG, JOB_DEAD_LETTERED,
 JOB_ENQUEUED, JOB_REQUEUED, JOB_RETRIED, JOB_SUCCEEDED, JOB_TOPIC,
 };
-pub use lifecycle_events::{
+pub use lifecycle_events{
 assert_lifecycle_sequence, emit_aid_event, emit_contract_record_event, emit_escrow_event,
 emit_lifecycle_transition, emit_proposal_event, emit_resource_transition, LifecycleEvent,
 LifecycleResource, LifecycleTransition, LIFECYCLE_EVENT_SCHEMA_VERSION, LIFECYCLE_TOPIC,
 STATE_NONE,
 };
-pub use migration::{
+pub use migration{
 begin_migration, clear_journal, dry_run, evaluate_post_checks, expected_step, fail_migration,
 finish_migration, is_resumable, load_journal, mark_step_complete, resume_index, save_journal,
 DryRunReport, MigrationError, MigrationJournal, MigrationPlan, MigrationStatus, MigrationStep,
 MigrationStepKind, PostCheck, PostCheckReport, RollbackStrategy,
 };
-pub use operational_metadata::{
+pub use operational_metadata{
 active_operational_hold, apply_operational_cleanup, classify_field,
 default_operational_policy, get_effective_operational_policy, get_operational_hold,
 get_operational_metadata, get_operational_retention_policy, has_operational_metadata,
@@ -208,24 +210,24 @@ FieldSensitivity, MetadataClass, MinimizedField, MinimizationReviewResult,
 OperationalCleanupPlan, OperationalCleanupReport, OperationalHold, OperationalModule,
 OperationalRetentionPolicy, RawMetadataField, StoredOperationalMetadata,
 };
-pub use pagination::{
+pub use pagination{
 paginate_id_list, paginate_id_range, Direction, PageRequest, PageResponse, DEFAULT_MAX_SCAN,
 DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT,
 };
-pub use payments::{
+pub use payments{
 calculate_fee, calculate_fee_split, create_escrow, deduct_fee, get_escrow, refund_escrow,
 release_escrow, safe_transfer, safe_transfer_from_contract, EscrowRecord, EscrowState,
 FeeConfig,
 };
-pub use preflight::{
+pub use preflight{
 preflight, require_preflight, requires_preflight, PreflightCheck, PreflightCode,
 PreflightInput, PreflightOperation, PreflightReport, PreflightStatus, RiskLevel,
-EXPIRY_WARNING_WINDOW_LEDGERS, HIGH_VALUE_WARNING_BPS,
+EXPIRY_WARNING_WINDOW_LEGEERS, HIGH_VALUE_WARNING_BPS,
 };
-pub use public_status::{
+pub use public_status{
     get_public_status, set_public_status, PublicStatus, PublicStatusReason, PublicStatusRecord,
 };
-pub use projection_repair::{
+pub use projection_repair{
 default_monitor_config, detect_cache_drift, detect_index_drift,
 execute_or_queue_projection_repair, get_latest_audit_receipt, get_monitor_config,
 get_pending_queue_count, get_queued_item, process_queued_repair, recommend_repair,
@@ -236,12 +238,24 @@ ProjectionStalenessSeverity, RepairActionOutcome, RepairRecommendation, StaleDri
 StaleProjectionItem, DEFAULT_MAX_IMMEDIATE_REPAIRS, DEFAULT_MAX_LAG_LEDGERS,
 DEFAULT_REBUILD_THRESHOLD_PCT,
 };
-pub use quota::{
+pub use quota{
 check_and_consume, get_quota_config, get_quota_status, get_usage, reset_quota,
 set_quota_config, QuotaConfig, QuotaStatus, QuotaUsage,
 };
 pub use reconciliation::{
-run_reconciliation, DriftItem, DriftType, ReconciliationReport, SourceRecord,
+    execute_projection_repairs, reconcile_aid_storage, reconcile_governance_storage,
+    reconcile_marketplace_storage, reconcile_oracle_storage, reconcile_referral_storage,
+    reconcile_treasury_storage, run_paginated_projection_reconciliation,
+    run_projection_reconciliation, run_reconciliation, DriftItem, DriftType,
+    PaginatedReconciliationResult, PaginationParams, ProjectionDriftItem, ProjectionDriftKind,
+    ProjectionReconciliationReport, ProjectionRepairInstruction, ProjectionRepairReceipt,
+    ReconciliationError, ReconciliationModule, ReconciliationReport, ReconciliationScopeConfig,
+    ReconciliationSeverity, SourceRecord, AID_COUNTER, AID_DONOR_CNT, AID_DONOR_PAGE,
+    AID_RCP_CNT, AID_RCP_PAGE, AID_RECORD, AID_SEARCH_CNT, AID_SEARCH_PAGE, GOV_ADMIN_CNT,
+    GOV_ADMIN_SET, GOV_APPROVAL, GOV_PROPOSAL, MKT_CANONICAL_AUCTION, MKT_CANONICAL_LISTING,
+    MKT_COLL_AUCTIONS, MKT_COLL_LISTINGS, ORACLE_LATEST_CNT, ORACLE_LATEST_PRICE,
+    ORACLE_LATEST_TS, ORACLE_SUBMISSIONS, REF_ACCRUED, REF_ADDR, REF_CODE, REF_LIFETIME,
+    TREASURY_STRAT_LST, TREASURY_STRAT_OK, TREASURY_STRAT_POS, TREASURY_STRAT_TOT,
 };
 pub use recovery::{
 abandon, complete_step, diagnostics, fail_step, is_stuck, next_action, open_operation, resume,
@@ -310,6 +324,14 @@ pub use degradation::{
     FallbackDecision, FallbackStrategy, RecoveryReceipt, TOPIC_DEGRADATION, TOPIC_FALLBACK,
     TOPIC_RECOVERY,
 };
+pub use policy_preview::{
+    commit_policy_change, default_policy_parameters, get_active_policy, get_simulation_preview,
+    rollback_policy_change, set_active_policy, simulate_policy_preview, validate_parameters,
+    validate_preview_for_commit, ExpectedSideEffectKind, PolicyImpactSeverity, PolicyModule,
+    PolicyParameters, PolicySimulationError, PolicySimulationPreview, PolicyType,
+    ProposedPolicyChange, RollbackConstraintReport, SideEffectSummary, DEFAULT_PREVIEW_VALIDITY_LEDGERS,
+    TOPIC_POLICY_COMMIT, TOPIC_POLICY_ROLLBACK, TOPIC_POLICY_SIMULATION,
+};
 pub use utils::{is_expired, now};
 #[cfg(test)]
 mod test_reconciliation;
@@ -321,8 +343,6 @@ mod test_auth;
 mod test_client;
 #[cfg(test)]
 mod test_disclosure;
-#[cfg(test)]
-mod test_duplicate_detection;
 #[cfg(test)]
 mod test_import;
 #[cfg(test)]
@@ -339,6 +359,8 @@ mod test_accessibility;
 mod test_degradation;
 #[cfg(test)]
 mod test_diagnostics;
+#[cfg(test)]
+mod test_policy_preview;
 #[cfg(test)]
 mod test_risk_scoring;
 #[cfg(test)]

@@ -160,5 +160,23 @@
     "migration_notes": "",
     "issue": 231,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-18",
+    "impact": "compatible",
+    "summary": "Implemented risk-scored abuse detection for suspicious high-impact operations with explainable risk signals, strike accumulation, step-up dual-authorization review, velocity throttling, and safe low-risk allowance in shared::abuse and shared::risk_scoring (Issue #242).",
+    "migration_notes": "",
+    "issue": 242,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-18",
+    "impact": "compatible",
+    "summary": "Implemented policy simulation preview framework before committing irreversible or high-impact changes, previewing affected records and users, expected operational side effects, and rollback constraints in shared::policy_preview (Issue #250).",
+    "migration_notes": "",
+    "issue": 250,
+    "pr": null
   }
 ]

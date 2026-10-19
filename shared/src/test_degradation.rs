@@ -17,7 +17,7 @@ use crate::health::{get_dependency_health, set_dependency_health, DependencyStat
 fn setup() -> (Env, Address) {
     let env = Env::default();
     let admin = Address::generate(&env);
-    crate::auth::set_admin(&env, &admin).unwrap();
+    crate::auth::set_admin(&env, &admin);
     (env, admin)
 }
 
