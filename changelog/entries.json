@@ -196,5 +196,14 @@
     "migration_notes": "",
     "issue": 334,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented dead-letter recovery for failed domain-event handlers: dispatch_event captures a handler failure instead of propagating it, retry_dead_letter is a permissionless backoff-gated retry, and requeue_dead_letter/discard_dead_letter are the admin-gated recovery path, reusing shared::jobs::RetryPolicy directly in shared::event_dead_letter (Issue #335).",
+    "migration_notes": "",
+    "issue": 335,
+    "pr": null
   }
 ]

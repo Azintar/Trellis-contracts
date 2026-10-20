@@ -19,6 +19,7 @@ pub mod diagnostics;
 pub mod disclosure;
 pub mod error_taxonomy;
 pub mod errors;
+pub mod event_dead_letter;
 pub mod events;
 pub mod evidence;
 pub mod export;
@@ -156,6 +157,13 @@ ABSOLUTE_MAX_EXPORT_RECORDS, CURRENT_EXPORT_SCHEMA_VERSION, DEFAULT_EXPORT_CHUNK
 DEFAULT_EXPORT_TTL_LEDGERS, DEFAULT_MAX_EXPORT_RECORDS, EXPORT_SCHEMA_V1,
 MAX_EXPORT_CHUNK_SIZE, MAX_EXPORT_TTL_LEDGERS, MAX_SUPPORTED_EXPORT_SCHEMA_VERSION,
 MIN_SUPPORTED_EXPORT_SCHEMA_VERSION,
+};
+pub use event_dead_letter::{
+    dead_letter_ids as event_dead_letter_ids, discard_dead_letter as discard_event_dead_letter,
+    dispatch_event, get_dead_letter as get_event_dead_letter, pending_dead_letter_ids,
+    requeue_dead_letter as requeue_event_dead_letter, retry_dead_letter, DispatchOutcome,
+    DomainEventHandler, EventDeadLetter, EventDispatchStatus, EVENT_DLQ_DEAD_LETTERED,
+    EVENT_DLQ_REQUEUED, EVENT_DLQ_RESOLVED, EVENT_DLQ_RETRIED, EVENT_DLQ_TOPIC,
 };
 pub use events::{
 emit, emit_collection_registered, emit_import_committed, emit_import_failed,
