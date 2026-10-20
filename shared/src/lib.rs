@@ -61,6 +61,7 @@ pub mod timeline;
 pub mod time_window;
 pub mod utils;
 pub mod webhook;
+pub mod workflow_correlation;
 // Re-export the most commonly-needed items at crate root for ergonomic use.
 pub use abuse::{
     assess_high_impact_abuse, evaluate_high_impact_abuse, get_abuse_policy, get_abuse_state,
@@ -355,6 +356,10 @@ mod test_pagination;
 mod test_audit_ledger;
 #[cfg(test)]
 mod test_release_readiness;
+#[cfg(test)]
+mod test_workflow_correlation;
+#[cfg(test)]
+mod test_migration;
 #[cfg(test)]
 mod test_accessibility;
 #[cfg(test)]
