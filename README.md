@@ -65,6 +65,7 @@
 | [docs/STATE_SNAPSHOT_EXPORT.md](docs/STATE_SNAPSHOT_EXPORT.md) | Signed, hash-chained state snapshots for audit/debugging: Ed25519 signer registry, chain verification, bounded export, and recovery runbook |
 | [docs/DEPENDENCY_HEALTH_GUARD.md](docs/DEPENDENCY_HEALTH_GUARD.md) | Authorized dependency health-check reporting and a retry/circuit-breaker budget around degraded-mode fallback execution |
 | [docs/EVENT_DEAD_LETTER.md](docs/EVENT_DEAD_LETTER.md) | Dead-letter recovery for failed domain-event handlers: permissionless backoff retry, admin requeue/discard, reusing `shared::jobs::RetryPolicy` |
+| [docs/CLIENT_REQUEST_VALIDATION.md](docs/CLIENT_REQUEST_VALIDATION.md) | Cross-repo client request validation: schema compatibility, field/identity checks, and an idempotent retry wrapper |
 | [docs/SYNTHETIC_JOURNEY_MONITOR.md](docs/SYNTHETIC_JOURNEY_MONITOR.md) | Runnable fund/quote/settle synthetic monitor, failure attribution, and recovery guidance |
 | [docs/RECONCILIATION_JOB.md](docs/RECONCILIATION_JOB.md) | Projection reconciliation job: comparing canonical truth with derived state, dry-run safety, and idempotent repair |
 - Storage Layout
@@ -3750,6 +3751,7 @@ This repository contains comprehensive documentation for contract design, gas op
 - [**docs/STATE_SNAPSHOT_EXPORT.md**](docs/STATE_SNAPSHOT_EXPORT.md) — Signed, hash-chained state snapshot export for audit and debugging: Ed25519 signer registry, chain verification, bounded export/verify, and rollback/recovery runbook.
 - [**docs/DEPENDENCY_HEALTH_GUARD.md**](docs/DEPENDENCY_HEALTH_GUARD.md) — Authorized dependency health-check reporting and a retry/circuit-breaker budget around degraded-mode fallback execution, closing the open-write and unbounded-retry gaps in `shared::health`/`shared::degradation`.
 - [**docs/EVENT_DEAD_LETTER.md**](docs/EVENT_DEAD_LETTER.md) — Dead-letter recovery for failed domain-event handlers: dispatch-and-capture instead of propagating, permissionless backoff retry, and admin-gated requeue/discard reusing `shared::jobs::RetryPolicy`.
+- [**docs/CLIENT_REQUEST_VALIDATION.md**](docs/CLIENT_REQUEST_VALIDATION.md) — Cross-repo client request validation: schema-version compatibility, field/semantic checks reusing `shared::semantic`, caller-identity authorization, and an idempotent retry wrapper around `shared::idempotency`.
 
 ## Module Documentation
 

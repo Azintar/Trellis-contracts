@@ -205,5 +205,14 @@
     "migration_notes": "",
     "issue": 335,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented request validation for cross-repo Trellis clients: schema-version compatibility checks, field/semantic validation reusing shared::semantic, caller-identity authorization against each request's claimed party, and a generic fingerprint_request plus begin_idempotent_request/complete_idempotent_request retry wrapper around shared::idempotency in shared::client_validation (Issue #336).",
+    "migration_notes": "",
+    "issue": 336,
+    "pr": null
   }
 ]

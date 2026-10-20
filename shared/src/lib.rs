@@ -9,6 +9,7 @@ pub mod batch;
 pub mod canonical;
 pub mod chaos;
 pub mod client;
+pub mod client_validation;
 pub mod compat;
 pub mod config;
 pub mod config_version;
@@ -116,6 +117,12 @@ client_schema_fingerprint, format_client_error, AidSummaryResponse, ClientErrorR
 ClientReceipt, CreateAidRequest, CreateEscrowRequest, CreateListingRequest,
 CreateProposalRequest, EscrowSummaryResponse, ListingSummaryResponse, OperationStatus,
 ProposalSummaryResponse, RebalanceRequest, RebalanceSummaryResponse, CLIENT_SCHEMA_VERSION,
+};
+pub use client_validation::{
+    begin_idempotent_request, complete_idempotent_request, ensure_supported_client_schema_version,
+    fingerprint_request, validate_create_aid_request, validate_create_escrow_request,
+    validate_create_listing_request, validate_create_proposal_request, validate_rebalance_request,
+    MAX_SLIPPAGE_BPS, MAX_SUPPORTED_CLIENT_SCHEMA_VERSION, MIN_SUPPORTED_CLIENT_SCHEMA_VERSION,
 };
 pub use compat::{
 current_schema_version, downgrade_v2_to_v1, ensure_supported_version, from_latest,
