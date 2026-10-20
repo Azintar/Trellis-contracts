@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `shared::health_guard`: Authorized dependency health-check reporting and a retry/circuit-breaker budget around degraded-mode fallback execution — admin-managed reporter registry gating `shared::degradation::record_dependency_check`, and `execute_guarded` (wrapping `execute_with_fallback`) that trips `DegradationError::CircuitBreakerOpen` after a configurable number of fallback attempts inside a rolling window, with admin reset and half-open cooldown recovery (#334); see `docs/DEPENDENCY_HEALTH_GUARD.md`
+- `shared::snapshot`: Signed, hash-chained state snapshot export for audit and debugging — admin-managed Ed25519 signer registry, per-module chained `capture_snapshot`, full on-chain `verify_chain` re-derivation, and a bounded, storage-free-verifiable `export_snapshots`/`verify_export` bundle (#301); see `docs/STATE_SNAPSHOT_EXPORT.md`
 - `shared::workflow_correlation`: shared correlation-ID policy for multi-contract workflows (1–64 bytes of ASCII letters, digits, `-`, `_`) with a chain check that requires every step of a workflow to carry the same ID; retries reuse the ID (#330); see `docs/WORKFLOW_CORRELATION.md`
 - `shared::migration::dry_run_cross_contract`: preview a migration across several contracts in one batch, reporting batch validity, totals across valid plans, approval requirements, and duplicate contracts, before any write (#332); see `docs/MIGRATION_SAFETY.md`
 - `shared::release_readiness::verify_initialized_addresses`: smoke-test gate check that fails when any initialized address is unset or the list is empty (#331); see `docs/RELEASE_READINESS.md`
