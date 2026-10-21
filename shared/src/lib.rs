@@ -75,8 +75,9 @@ pub use risk_scoring::{
 };
 pub use audit_ledger::{
 append_event, append_financial, append_privileged, checkpoint, entry_hash, export_digest,
-export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint, verify_chain,
-verify_export,
+export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint,
+record_admin_change, verify_admin_receipt, verify_chain, verify_export,
+AdminChangeReceipt, AdminReceiptStatus,
 AuditEventClass, AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerExport,
 AuditLedgerHead, AuditLedgerKey, AuditVerificationFailure, AuditVerificationReport,
 AUDIT_DOMAIN, AUDIT_LEDGER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,

@@ -53,6 +53,8 @@ contract type.
 | `verify_export(env, export)` | Storage-free verification of an export bundle. |
 | `export_digest(env, export)` | Recompute a bundle digest after re-serialization. |
 | `publish_head_checkpoint(env)` | Emit `("audit","head")` with the current anchor. |
+| `record_admin_change(env, kind, module, actor, subject, attribute, note)` | Append a privileged change and return an `AdminChangeReceipt` for the administrator. |
+| `verify_admin_receipt(env, receipt)` | Check a receipt against the live chain; returns `AdminReceiptStatus`. |
 
 `AuditEventKind` is the closed taxonomy. Variants are stable: add new variants
 with new numeric codes, never reuse or renumber one, because the code is part of
