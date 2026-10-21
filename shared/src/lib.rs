@@ -6,6 +6,7 @@ pub mod audit_ledger;
 pub mod auth;
 pub mod backfill;
 pub mod batch;
+pub mod batch_retry;
 pub mod canonical;
 pub mod chaos;
 pub mod client;
@@ -31,6 +32,7 @@ pub mod history;
 pub mod idempotency;
 pub mod impersonation;
 pub mod import;
+pub mod init_rollback;
 pub mod invariants;
 pub mod jobs;
 pub mod lifecycle;
@@ -46,6 +48,7 @@ pub mod policy_preview;
 pub mod preflight;
 pub mod public_status;
 pub mod projection_repair;
+pub mod protocol_changelog;
 pub mod quota;
 pub mod reconciliation;
 pub mod recovery;
@@ -55,6 +58,7 @@ pub mod risk_scoring;
 pub mod rollout_guard;
 pub mod retention;
 pub mod sanitize;
+pub mod scan_guard;
 pub mod semantic;
 pub mod snapshot;
 pub mod storage;
@@ -106,6 +110,10 @@ pub use batch::{
 batch_invoke_no_args, execute_multi_invoke, execute_multi_transfer, multi_transfer_all,
 BatchConfig, BatchError, BatchMode, BatchResult, BatchTransfer, OperationResult,
 ABSOLUTE_MAX_BATCH_SIZE, DEFAULT_MAX_BATCH_SIZE,
+};
+pub use batch_retry::{
+    discard_batch_failure_report, get_batch_failure_report, record_batch_failures,
+    retry_batch_failures, BatchFailureDetail, BatchFailureReport, BATCH_RETRY_TOPIC,
 };
 pub use canonical::{
 canonical_bytes, canonical_fingerprint, canonicalize_legacy, ensure_supported_encoding,
@@ -204,6 +212,11 @@ validate_config as validate_import_config, DuplicatePolicy, ImportConfig, Import
 ImportItem, ImportMode, ImportReport, RollbackGuidance, RowError, StoredImportRecord,
 ABSOLUTE_MAX_IMPORT_SIZE, DEFAULT_MAX_IMPORT_SIZE, MAX_EXTERNAL_ID_LEN,
 };
+pub use init_rollback::{
+    begin_initialization, complete_init_step, complete_rollback, fail_init_step, get_tracker,
+    verify_rollback as verify_init_rollback, InitRollbackVerification, InitStep, InitStepOutcome,
+    InitStepProbe, InitializationStatus, InitializationTracker, INIT_ROLLBACK_TOPIC,
+};
 pub use invariants::*;
 pub use jobs::{
 configure_worker, dead_letter_job_ids, dedupe_key_pair, dedupe_key_u64, default_worker_config,
@@ -265,6 +278,12 @@ ProjectionStalenessSeverity, RepairActionOutcome, RepairRecommendation, StaleDri
 StaleProjectionItem, DEFAULT_MAX_IMMEDIATE_REPAIRS, DEFAULT_MAX_LAG_LEDGERS,
 DEFAULT_REBUILD_THRESHOLD_PCT,
 };
+pub use protocol_changelog::{
+    get_protocol_change, has_breaking_change_since, latest_protocol_change,
+    latest_protocol_change_for_module, length as protocol_changelog_length,
+    list_protocol_changes_since, record_protocol_change, ChangeImpact, ProtocolChangeEntry,
+    PROTOCOL_CHANGELOG_TOPIC,
+};
 pub use quota::{
 check_and_consume, get_quota_config, get_quota_status, get_usage, reset_quota,
 set_quota_config, QuotaConfig, QuotaStatus, QuotaUsage,
@@ -315,6 +334,10 @@ RetentionRecord, HOLD_INDEFINITE, LEDGERS_PER_DAY, MAX_RETAIN_LEDGERS,
 pub use sanitize::{
 sanitize_text, sanitize_url, trim_whitespace, validate_external_url, validate_safe_text,
 SafeScheme, MAX_TEXT_LEN, MAX_URL_LEN,
+};
+pub use scan_guard::{
+    bounded_offset_scan, clamp_scan_limit, ensure_within_scan_budget, get_effective_scan_limit,
+    set_scan_limit, BoundedScanResult, ABSOLUTE_MAX_SCAN,
 };
 pub use semantic::{
 validate_amount, validate_distinct_parties, validate_future_expiry, AmountRule, ExpiryRule,
