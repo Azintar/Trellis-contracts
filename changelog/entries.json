@@ -250,5 +250,41 @@
     "migration_notes": "",
     "issue": 340,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Added next-version schema migration checks: read-only check_schema_migration and admin-gated, idempotent commit_schema_migration, which stamps a version only after a completed journal for that exact plan (#262).",
+    "migration_notes": "",
+    "issue": 262,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Added shared::degraded_mode::guard_operation: while a dependency is degraded, new-fund entry operations are refused with DependencyDegraded before any write, exits are never blocked, and reads are flagged read-only (#265).",
+    "migration_notes": "",
+    "issue": 265,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "breaking",
+    "summary": "The aid contract enforces balance, ownership, and entitlement invariants on every transition; claim_aid/refund_aid reject milestone programs and escrow inflows with a short balance delta fail with InvariantViolation (118) (#266).",
+    "migration_notes": "Clients must claim and refund milestone programs with claim_aid_milestone and refund_milestone_aid; claim_aid/refund_aid now return InvalidArgument (111) for them. Indexers should expect status PartiallyClaimed on milestone records and handle the new AidError::InvariantViolation (118). refund_milestone_aid now also returns verified-but-unclaimed tranches to the donor, and delete_aid rejects partially claimed records with CannotDeletePending. No storage migration is needed: existing milestone records are re-derived from their stored tranches on the next claim or refund.",
+    "issue": 266,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Added event dead-letter operator tooling: bounded list_event_dead_letters with status and due-ledger filters, event_dead_letter_summary, admin bulk requeue_dead_letters with per-id outcomes, and scripts/dead-letter-ops.cjs (#267).",
+    "migration_notes": "",
+    "issue": 267,
+    "pr": null
   }
 ]
