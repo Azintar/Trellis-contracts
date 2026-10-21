@@ -11,6 +11,7 @@ pub mod chaos;
 pub mod client;
 pub mod compat;
 pub mod config;
+pub mod config_version;
 pub mod domain_events;
 pub mod dashboard;
 pub mod degradation;
@@ -34,6 +35,7 @@ pub mod lifecycle_events;
 pub mod math;
 pub mod migration;
 pub mod operational_metadata;
+pub mod operator_runbook;
 pub mod pagination;
 pub mod payments;
 pub mod policy;
@@ -59,6 +61,7 @@ pub mod timeline;
 pub mod time_window;
 pub mod utils;
 pub mod webhook;
+pub mod workflow_correlation;
 // Re-export the most commonly-needed items at crate root for ergonomic use.
 pub use abuse::{
     assess_high_impact_abuse, evaluate_high_impact_abuse, get_abuse_policy, get_abuse_state,
@@ -353,6 +356,10 @@ mod test_pagination;
 mod test_audit_ledger;
 #[cfg(test)]
 mod test_release_readiness;
+#[cfg(test)]
+mod test_workflow_correlation;
+#[cfg(test)]
+mod test_migration;
 #[cfg(test)]
 mod test_accessibility;
 #[cfg(test)]
