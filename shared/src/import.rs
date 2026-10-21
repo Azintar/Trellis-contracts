@@ -34,12 +34,12 @@
 //! - Repeated executions of the same batch with `SkipExisting` result in `create_count = 0`, `update_count = 0`, and `skip_count = total_rows`.
 //! - No duplicate persistent records are created on re-runs.
 
-use soroban_sdk:{
+use soroban_sdk::{
     contracterror, contracttype, symbol_short, Address, Bytes, BytesN, Env, Map, Symbol, Vec,
 };
 
-pub use crate::mugration::RollbackStrategy;
-use crate::storage:4{
+pub use crate::migration::RollbackStrategy;
+use crate::storage::{
     instance_get, instance_set, persistent_has, persistent_read, persistent_set,
     temporary_has, temporary_remove, temporary_set,
 };
@@ -119,7 +119,7 @@ pub struct QuarantinedRow {
 
 // ----------------------------------------------------------------------------
 // Pipeline Types
-#/ ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Atomicity mode for executing the import.
 #[contracttype]
@@ -226,7 +226,7 @@ pub struct ImportReport {
     /// Rows quarantined for operator review (unsafe rows rejected from commit).
     pub quarantined: Vec<QuarantinedRow>,
     /// Deterministic 32-byte cryptographic fingerprint of the import batch.
-    pub batch_fingerprint: BytesN32>,
+    pub batch_fingerprint: BytesN<32>,
 }
 
 /// Stored record format for persistent state tracking.
@@ -253,7 +253,7 @@ pub struct StoredImportRecord {
 
 // ----------------------------------------------------------------------------
 // Storage Key Helpers
-#/ ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 fn external_record_key(external_id: &Bytes) -> (Symbol, Bytes) {
     (symbol_short!("imp_ext"), external_id.clone())
@@ -266,7 +266,7 @@ fn batch_marker_key(fingerprint: &BytesN<32>) -> (Symbol, BytesN<32>) {
 
 // ----------------------------------------------------------------------------
 // Reentrancy Guard
-#/ ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 fn acquire_reentrancy_guard(env: &Env) -> Result<(), ImportError> {
     if temporary_has(env, &REENTRANCY_KEY) {
@@ -282,7 +282,7 @@ fn release_reentrancy_guard(env: &Env) {
 
 // ----------------------------------------------------------------------------
 // Fingerprint & Validation
-#/ ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Computes a deterministic SHA-256 fingerprint of the input batch.
 pub fn compute_batch_fingerprint(env: &Env, items: &Vec<ImportItem>) -> BytesN<32> {
@@ -302,7 +302,7 @@ pub fn compute_batch_fingerprint(env: &Env, items: &Vec<ImportItem>) -> BytesN<3
         }
         payload.append(&row_bytes);
     }
-    env.crypto().sha256(&`ayload).into()
+    env.crypto().sha256(&payload).into()
 }
 
 /// Validates configuration bounds.
