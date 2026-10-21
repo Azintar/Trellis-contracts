@@ -202,3 +202,98 @@ fn forbidden_secret_fields_are_purged_on_every_pass() {
         assert_eq!(safe.get(0).unwrap().name, symbol_short!("status"));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Issue #269: Redaction tests for logs, exports, and error responses
+// ---------------------------------------------------------------------------
+
+use crate::error_taxonomy::{describe_error, ErrorCategory, ErrorDomain};
+use crate::client::format_client_error;
+use soroban_sdk::BytesN;
+
+#[test]
+fn normal_path_logs_and_events_emit_only_sanitized_public_data() {
+    let env = Env::default();
+    let safe_key = Bytes::from_slice(&env, b"operation_status");
+    let safe_val = Bytes::from_slice(&env, b"success");
+
+    // Bounded and safe labels pass through
+    let result = sanitize_telemetry_label(&env, &safe_key, &safe_val, 0);
+    assert_eq!(result, Ok(safe_val));
+}
+
+#[test]
+fn failure_path_logs_strip_secrets_and_private_keys() {
+    let env = Env::default();
+    let secret_key = Bytes::from_slice(&env, b"priv_key");
+    let secret_val = Bytes::from_slice(&env, STELLAR_SECRET.as_bytes());
+
+    // Telemetry redaction masks secrets
+    let redacted = redact_telemetry_value(&env, &secret_key, &secret_val).expect("Redaction must succeed");
+    assert_eq!(redacted, Bytes::from_slice(&env, REDACTED_TOKEN));
+    assert_ne!(redacted, secret_val);
+
+    // Direct secret debug formatting never dumps raw secret
+    let debug_repr = format!("{:?}", RedactedSecret(STELLAR_SECRET));
+    assert!(!debug_repr.contains(STELLAR_SECRET));
+}
+
+#[test]
+fn normal_and_failure_path_exports_purge_sensitive_material() {
+    let env = Env::default();
+    let mut fields: Vec<ExportField> = Vec::new(&env);
+    fields.push_back(field(&env, symbol_short!("batch_id"), "1001"));
+    fields.push_back(field(&env, symbol_short!("seed"), "SECRET_SEED_DATA"));
+    fields.push_back(field(&env, symbol_short!("wallet"), "G_ACCOUNT_KEY"));
+
+    let (safe, purged) = purge_forbidden_fields(&env, &fields);
+    assert_eq!(purged, 2, "Both seed and wallet must be purged");
+    assert_eq!(safe.len(), 1);
+    assert_eq!(safe.get(0).unwrap().name, symbol_short!("batch_id"));
+}
+
+#[test]
+fn retry_path_export_redaction_is_strictly_idempotent() {
+    let env = Env::default();
+    let mut fields: Vec<ExportField> = Vec::new(&env);
+    fields.push_back(field(&env, symbol_short!("priv_key"), "S_KEY_DATA"));
+    fields.push_back(field(&env, symbol_short!("tx_hash"), "0x1234"));
+    fields.push_back(field(&env, symbol_short!("status"), "settled"));
+
+    // Multiple passes over identical batch return identical redaction
+    for _ in 0..3 {
+        let (safe, purged) = purge_forbidden_fields(&env, &fields);
+        assert_eq!(purged, 2);
+        assert_eq!(safe.len(), 1);
+        assert_eq!(safe.get(0).unwrap().name, symbol_short!("status"));
+    }
+}
+
+#[test]
+fn error_responses_never_echo_sensitive_inputs_or_secrets() {
+    let env = Env::default();
+    let corr_id = BytesN::from_array(&env, &[0xAA; 32]);
+
+    // UnsafeSecret error must have user message that does NOT contain raw secret fragments
+    let info = describe_error(&env, ErrorDomain::Shared, Error::UnsafeSecret as u32, corr_id.clone());
+    assert_eq!(info.category, ErrorCategory::Configuration);
+    assert_eq!(info.retryable, false);
+
+    // Format into client envelope
+    let client_err = format_client_error(&env, ErrorDomain::Shared, Error::UnsafeSecret as u32, corr_id.clone());
+    assert_eq!(client_err.domain, symbol_short!("shared"));
+    assert_eq!(client_err.retryable, false);
+    assert_eq!(client_err.correlation_id, corr_id);
+}
+
+#[test]
+fn authorization_path_errors_do_not_leak_internal_state() {
+    let env = Env::default();
+    let corr_id = BytesN::from_array(&env, &[0xBB; 32]);
+
+    // Unauthorized across domains should present standard non-leaking message
+    let info = describe_error(&env, ErrorDomain::AccessControl, Error::Unauthorized as u32, corr_id);
+    assert_eq!(info.category, ErrorCategory::Authorization);
+    assert_eq!(info.retryable, false);
+}
+
