@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `shared::workflow_correlation`: shared correlation-ID policy for multi-contract workflows (1–64 bytes of ASCII letters, digits, `-`, `_`) with a chain check that requires every step of a workflow to carry the same ID; retries reuse the ID (#330); see `docs/WORKFLOW_CORRELATION.md`
+- `shared::migration::dry_run_cross_contract`: preview a migration across several contracts in one batch, reporting batch validity, totals across valid plans, approval requirements, and duplicate contracts, before any write (#332); see `docs/MIGRATION_SAFETY.md`
+- `shared::release_readiness::verify_initialized_addresses`: smoke-test gate check that fails when any initialized address is unset or the list is empty (#331); see `docs/RELEASE_READINESS.md`
+- Permission matrix tests for `contracts/access-control` covering every privileged entrypoint with an unauthorized caller, asserting `NotAdmin`, `RoleEscalation`, or `Unauthorized` and that refused calls leave state unchanged (#333)
 - `shared::policy_preview`: Policy simulation preview framework for previewing affected records and users, expected operational side effects, and rollback constraints before committing irreversible or high-impact changes across Treasury, Aid, Referral, Governance, Oracle, and Marketplace modules (#250); see `docs/POLICY_SIMULATION_PREVIEW.md`
 - `shared::degradation`: External dependency degradation matrix with failure mode classification, tiered degradation levels (`Nominal`, `DegradedMinor`, `DegradedMajor`, `CriticalFailure`), user-safe fallback behavior (`FallbackStrategy`, `FallbackDecision`), automated checks, and recovery receipts across Treasury, Aid, Referral, Governance, Oracle, and Marketplace modules (#231); see `docs/EXTERNAL_DEPENDENCY_DEGRADATION_MATRIX.md`
 - `shared::export`: Permission-aware export pipeline with bounded memory chunking, in-flight cancellation, multi-module role authorization (Treasury, Aid, Referral, Governance, Oracle, Marketplace), forbidden field purging, and cumulative SHA-256 stream digests; see `docs/EXPORT_PIPELINE.md`
