@@ -385,3 +385,6 @@ mod test_projection_repair;
 pub mod ledger_sequence;
 #[cfg(test)]
 mod test_ledger_sequence;
+// Edge-case fixtures for the ledger-sequence harness (Issue #335).
+#[cfg(test)]
+mod test_ledger_fixtures;
