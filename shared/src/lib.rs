@@ -388,3 +388,6 @@ mod test_ledger_sequence;
 // Edge-case fixtures for the ledger-sequence harness (Issue #335).
 #[cfg(test)]
 mod test_ledger_fixtures;
+// Schema-compatibility tests for versioned domain events (Issue #337).
+#[cfg(test)]
+mod test_domain_events;
