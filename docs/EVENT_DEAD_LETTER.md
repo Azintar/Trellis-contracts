@@ -89,3 +89,94 @@ Purely additive: new storage keys, no changes to `shared::domain_events`,
 `shared::jobs`, or any contract interface. A contract adopts it by calling
 `dispatch_event` after (or instead of) directly invoking its own handler
 logic for a published event; nothing changes until that call is wired in.
+
+## Operator tooling (Issue #267)
+
+### Library additions
+
+| Item | Purpose | Cost |
+|---|---|---|
+| `list_event_dead_letters(env, status, due_by, offset, limit)` | One page of `Pending` or `DeadLettered` letters. `due_by: Some(ledger)` keeps only letters `retry_dead_letter` would accept at that ledger. | At most the `evt_dlq` scan limit of record reads (`shared::scan_guard`), so the cost is bounded regardless of queue size |
+| `event_dead_letter_summary(env)` | `pending`, `dead_lettered`, `total_created` | Two index reads and one instance read |
+| `requeue_dead_letters(env, admin, ids, now)` | Admin bulk requeue after a handler fix; returns a `shared::batch::BatchResult` with one outcome per id | ≤ `MAX_REQUEUE_BATCH` (25) record writes, and each index written once |
+
+### Forwarding entry points
+
+The tool drives a contract that exposes:
+
+```rust
+pub fn dlq_summary(env: Env) -> EventDeadLetterSummary {
+    event_dead_letter::event_dead_letter_summary(&env)
+}
+pub fn dlq_list(env: Env, status: EventDispatchStatus, due_by: Option<u32>,
+                offset: u32, limit: u32) -> EventDeadLetterPage {
+    event_dead_letter::list_event_dead_letters(&env, status, due_by, offset, limit)
+}
+pub fn dlq_get(env: Env, id: u64) -> Option<EventDeadLetter> {
+    event_dead_letter::get_dead_letter(&env, id)
+}
+pub fn dlq_retry(env: Env, id: u64) -> Result<DispatchOutcome, Error> {
+    let now = env.ledger().sequence();
+    event_dead_letter::retry_dead_letter(&env, id, now, &MyHandler)
+}
+pub fn dlq_requeue(env: Env, admin: Address, ids: Vec<u64>) -> Result<BatchResult, Error> {
+    let now = env.ledger().sequence();
+    event_dead_letter::requeue_dead_letters(&env, &admin, &ids, now)
+}
+pub fn dlq_discard(env: Env, admin: Address, id: u64) -> Result<EventDeadLetter, Error> {
+    event_dead_letter::discard_dead_letter(&env, &admin, id)
+}
+```
+
+### `scripts/dead-letter-ops.cjs`
+
+```bash
+export DLQ_CONTRACT_ID=C...   # contract exposing dlq_*
+export DLQ_SOURCE=operator    # stellar CLI identity
+node scripts/dead-letter-ops.cjs summary
+node scripts/dead-letter-ops.cjs list --status DeadLettered --limit 20
+node scripts/dead-letter-ops.cjs list --status Pending --due
+node scripts/dead-letter-ops.cjs show 42
+node scripts/dead-letter-ops.cjs retry 42
+node scripts/dead-letter-ops.cjs retry-due --max 25
+node scripts/dead-letter-ops.cjs requeue 42 43 44 --admin G...  --source admin
+node scripts/dead-letter-ops.cjs discard 42 --admin G... --source admin
+node scripts/dead-letter-ops.cjs requeue 42 --admin G... --dry-run
+```
+
+Reads are simulated with `--send no` and never submit a transaction.
+`retry-due` reads the latest ledger with `stellar ledger latest`, collects
+the due ids before retrying (each success removes its id from the `Pending`
+index), and sends one transaction per letter, so one bad letter cannot block
+the rest. `--dry-run` prints the exact CLI calls, which is useful for
+reviewing admin transactions before they are sent.
+
+### Edge cases
+
+| Situation | Behavior |
+|---|---|
+| A bulk requeue includes an id that is missing, or not `DeadLettered` (e.g. already `Pending`, or listed twice) | `Failure(code)` for that id (`NotFound` = 2, `InvalidTransition` = 950); the other ids still go through |
+| More than 25 ids | `QuotaExceeded`; the tool sends chunks of 25 |
+| Empty id list | `InvalidArgument` |
+| Non-admin requeue | `Unauthorized`, before anything is read |
+| A letter becomes due, or resolves, between `list` and `retry` | The retry returns `ActionTooEarly`, or `NotFound` because the record is deleted once resolved; nothing changes, and `retry-due` reports it and continues |
+| The index outgrows the scan limit | The page stops early with `has_more: true`; continue from `next_offset`. Tighten the limit with `scan_guard::set_scan_limit(env, admin, EVENT_DLQ_TOPIC, n)` |
+
+### Runbook
+
+1. `summary` → `list --status DeadLettered` → `show <id>`; read
+   `last_error` against `docs/ERRORS.md`.
+2. Fix and redeploy the handler (handlers must stay idempotent).
+3. `requeue <ids…> --admin …` gives each letter a fresh attempt budget.
+4. `retry-due` replays them immediately. A letter that fails again follows
+   its stored `RetryPolicy` back to `Pending` or `DeadLettered`.
+5. A letter that must never run again is `discard`ed. The record stays for
+   audit.
+
+Rollback: requeue never touches the event payload or policy. Undoing it
+means letting the letter exhaust its retries again, or discarding it.
+
+```bash
+cargo test -p shared event_dead_letter
+node scripts/dead-letter-ops.cjs requeue 1 2 --admin GADMIN --contract CDLQ --dry-run
+```

@@ -17,6 +17,7 @@ pub mod config_version;
 pub mod domain_events;
 pub mod dashboard;
 pub mod degradation;
+pub mod degraded_mode;
 pub mod diagnostics;
 pub mod disclosure;
 pub mod error_taxonomy;
