@@ -178,5 +178,41 @@
     "migration_notes": "",
     "issue": 250,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented signed, hash-chained state snapshot export for audit and debugging: admin-managed Ed25519 signer registry, per-module chained snapshot capture, full chain re-derivation (verify_chain), and a bounded, storage-free-verifiable export bundle in shared::snapshot (Issue #301).",
+    "migration_notes": "",
+    "issue": 301,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented authorized dependency health-check reporting and a retry/circuit-breaker budget around degraded-mode fallback execution: admin-managed reporter registry gating shared::degradation::record_dependency_check, and execute_guarded enforcing a bounded, cooldown-recoverable retry budget per dependency in shared::health_guard (Issue #334).",
+    "migration_notes": "",
+    "issue": 334,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented dead-letter recovery for failed domain-event handlers: dispatch_event captures a handler failure instead of propagating it, retry_dead_letter is a permissionless backoff-gated retry, and requeue_dead_letter/discard_dead_letter are the admin-gated recovery path, reusing shared::jobs::RetryPolicy directly in shared::event_dead_letter (Issue #335).",
+    "migration_notes": "",
+    "issue": 335,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented request validation for cross-repo Trellis clients: schema-version compatibility checks, field/semantic validation reusing shared::semantic, caller-identity authorization against each request's claimed party, and a generic fingerprint_request plus begin_idempotent_request/complete_idempotent_request retry wrapper around shared::idempotency in shared::client_validation (Issue #336).",
+    "migration_notes": "",
+    "issue": 336,
+    "pr": null
   }
 ]
