@@ -6,9 +6,11 @@ pub mod audit_ledger;
 pub mod auth;
 pub mod backfill;
 pub mod batch;
+pub mod batch_retry;
 pub mod canonical;
 pub mod chaos;
 pub mod client;
+pub mod client_validation;
 pub mod compat;
 pub mod config;
 pub mod config_version;
@@ -19,15 +21,18 @@ pub mod diagnostics;
 pub mod disclosure;
 pub mod error_taxonomy;
 pub mod errors;
+pub mod event_dead_letter;
 pub mod events;
 pub mod evidence;
 pub mod export;
 pub mod feature_flags;
 pub mod health;
+pub mod health_guard;
 pub mod history;
 pub mod idempotency;
 pub mod impersonation;
 pub mod import;
+pub mod init_rollback;
 pub mod invariants;
 pub mod jobs;
 pub mod lifecycle;
@@ -43,6 +48,7 @@ pub mod policy_preview;
 pub mod preflight;
 pub mod public_status;
 pub mod projection_repair;
+pub mod protocol_changelog;
 pub mod quota;
 pub mod reconciliation;
 pub mod recovery;
@@ -52,7 +58,9 @@ pub mod risk_scoring;
 pub mod rollout_guard;
 pub mod retention;
 pub mod sanitize;
+pub mod scan_guard;
 pub mod semantic;
+pub mod snapshot;
 pub mod storage;
 pub mod stale_state;
 pub mod storage_version;
@@ -75,8 +83,9 @@ pub use risk_scoring::{
 };
 pub use audit_ledger::{
 append_event, append_financial, append_privileged, checkpoint, entry_hash, export_digest,
-export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint, verify_chain,
-verify_export,
+export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint,
+record_admin_change, verify_admin_receipt, verify_chain, verify_export,
+AdminChangeReceipt, AdminReceiptStatus,
 AuditEventClass, AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerExport,
 AuditLedgerHead, AuditLedgerKey, AuditVerificationFailure, AuditVerificationReport,
 AUDIT_DOMAIN, AUDIT_LEDGER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,
@@ -93,6 +102,11 @@ require_admin, require_not_paused, require_permission, role_for_permission, set_
 PendingOwnershipTransfer, Permission, Role,
 };
 pub use backfill::{
+advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dedupe_items,
+dry_run as dry_run_backfill, fail_backfill, is_resumable as is_backfill_resumable,
+load_checkpoint as load_backfill_checkpoint, resume_backfill,
+save_checkpoint as save_backfill_checkpoint,
+BackfillAction, BackfillCheckpoint, BackfillDuplicatePolicy, BackfillError,
 advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dry_run as dry_run_backfill,
 fail_backfill, is_resumable as is_backfill_resumable, load_checkpoint as load_backfill_checkpoint,
 save_checkpoint as save_backfill_checkpoint, BackfillAction, BackfillCheckpoint, BackfillError,
@@ -102,6 +116,10 @@ pub use batch::{
 batch_invoke_no_args, execute_multi_invoke, execute_multi_transfer, multi_transfer_all,
 BatchConfig, BatchError, BatchMode, BatchResult, BatchTransfer, OperationResult,
 ABSOLUTE_MAX_BATCH_SIZE, DEFAULT_MAX_BATCH_SIZE,
+};
+pub use batch_retry::{
+    discard_batch_failure_report, get_batch_failure_report, record_batch_failures,
+    retry_batch_failures, BatchFailureDetail, BatchFailureReport, BATCH_RETRY_TOPIC,
 };
 pub use canonical::{
 canonical_bytes, canonical_fingerprint, canonicalize_legacy, ensure_supported_encoding,
@@ -115,6 +133,12 @@ client_schema_fingerprint, format_client_error, AidSummaryResponse, ClientErrorR
 ClientReceipt, CreateAidRequest, CreateEscrowRequest, CreateListingRequest,
 CreateProposalRequest, EscrowSummaryResponse, ListingSummaryResponse, OperationStatus,
 ProposalSummaryResponse, RebalanceRequest, RebalanceSummaryResponse, CLIENT_SCHEMA_VERSION,
+};
+pub use client_validation::{
+    begin_idempotent_request, complete_idempotent_request, ensure_supported_client_schema_version,
+    fingerprint_request, validate_create_aid_request, validate_create_escrow_request,
+    validate_create_listing_request, validate_create_proposal_request, validate_rebalance_request,
+    MAX_SLIPPAGE_BPS, MAX_SUPPORTED_CLIENT_SCHEMA_VERSION, MIN_SUPPORTED_CLIENT_SCHEMA_VERSION,
 };
 pub use compat::{
 current_schema_version, downgrade_v2_to_v1, ensure_supported_version, from_latest,
@@ -162,12 +186,30 @@ IMPORT_COMMITTED, IMPORT_FAILED, IMPORT_SIMULATED, PARAMETER_CHANGED, PAYMENT_ES
 PAYMENT_ESCROW_REFUNDED, PAYMENT_ESCROW_RELEASED, PAYMENT_FEE, PAYMENT_TRANSFER,
 REFERRAL_ACCRUED, REFERRAL_REGISTERED, REFERRER_SET, TIER_CONFIG_SET, TREASURY_DEPOSIT,
 TREASURY_EMERGENCY_WITHDRAW, TREASURY_SET, TREASURY_WITHDRAW,
+pub use event_dead_letter::{
+    dead_letter_ids as event_dead_letter_ids, discard_dead_letter as discard_event_dead_letter,
+    dispatch_event, get_dead_letter as get_event_dead_letter, pending_dead_letter_ids,
+    requeue_dead_letter as requeue_event_dead_letter, retry_dead_letter, DispatchOutcome,
+    DomainEventHandler, EventDeadLetter, EventDispatchStatus, EVENT_DLQ_DEAD_LETTERED,
+    EVENT_DLQ_REQUEUED, EVENT_DLQ_RESOLVED, EVENT_DLQ_RETRIED, EVENT_DLQ_TOPIC,
+};
+pub use events::{
+emit, emit_collection_registered, emit_import_committed, emit_import_failed,
+emit_import_simulated, emit_nft_auction, emit_nft_bid, emit_nft_listed, emit_nft_offer,
+emit_nft_settle, emit_nft_sold, emit_royalty_paid,
 };
 pub use evidence::*;
 pub use chaos::*;
 pub use health::{
 get_dependency_health, list_dependency_health, set_dependency_health, DependencyHealth,
 DependencyStatus,
+};
+pub use health_guard::{
+    breaker_state, check_and_record_attempt, execute_guarded, get_retry_budget,
+    is_registered_reporter, register_reporter, report_health_check, reset_breaker,
+    revoke_reporter, set_retry_budget, CircuitBreakerState, RetryBudget,
+    DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_COOLDOWN_LEDGERS, DEFAULT_RETRY_WINDOW_LEDGERS,
+    TOPIC_HEALTH_GUARD,
 };
 pub use impersonation::{
 check_action_permission, create_session, get_active_sessions_for_impersonator,
@@ -178,9 +220,16 @@ DEFAULT_SESSION_DURATION, MAX_CONCURRENT_SESSIONS, MAX_SESSION_DURATION,
 };
 pub use import::{
 compute_batch_fingerprint,
+compute_batch_fingerprint, dry_run as dry_run_import, execute_import,
+generate_rollback_guidance, get_import_counter, get_imported_record, has_imported_record,
 validate_config as validate_import_config, DuplicatePolicy, ImportConfig, ImportError,
 ImportItem, ImportMode, ImportReport, RollbackGuidance, RowError, StoredImportRecord,
 ABSOLUTE_MAX_IMPORT_SIZE, DEFAULT_MAX_IMPORT_SIZE, MAX_EXTERNAL_ID_LEN,
+};
+pub use init_rollback::{
+    begin_initialization, complete_init_step, complete_rollback, fail_init_step, get_tracker,
+    verify_rollback as verify_init_rollback, InitRollbackVerification, InitStep, InitStepOutcome,
+    InitStepProbe, InitializationStatus, InitializationTracker, INIT_ROLLBACK_TOPIC,
 };
 pub use invariants::*;
 pub use jobs::{
@@ -243,6 +292,12 @@ ProjectionStalenessSeverity, RepairActionOutcome, RepairRecommendation, StaleDri
 StaleProjectionItem, DEFAULT_MAX_IMMEDIATE_REPAIRS, DEFAULT_MAX_LAG_LEDGERS,
 DEFAULT_REBUILD_THRESHOLD_PCT,
 };
+pub use protocol_changelog::{
+    get_protocol_change, has_breaking_change_since, latest_protocol_change,
+    latest_protocol_change_for_module, length as protocol_changelog_length,
+    list_protocol_changes_since, record_protocol_change, ChangeImpact, ProtocolChangeEntry,
+    PROTOCOL_CHANGELOG_TOPIC,
+};
 pub use quota::{
 check_and_consume, get_quota_config, get_quota_status, get_usage, reset_quota,
 set_quota_config, QuotaConfig, QuotaStatus, QuotaUsage,
@@ -294,6 +349,10 @@ pub use sanitize::{
 sanitize_text, sanitize_url, trim_whitespace, validate_external_url, validate_safe_text,
 SafeScheme, MAX_TEXT_LEN, MAX_URL_LEN,
 };
+pub use scan_guard::{
+    bounded_offset_scan, clamp_scan_limit, ensure_within_scan_budget, get_effective_scan_limit,
+    set_scan_limit, BoundedScanResult, ABSOLUTE_MAX_SCAN,
+};
 pub use semantic::{
 validate_amount, validate_distinct_parties, validate_future_expiry, AmountRule, ExpiryRule,
 };
@@ -302,6 +361,15 @@ instance_get, instance_has, instance_remove, instance_set, is_paused, persistent
 persistent_get, persistent_has, persistent_remove, persistent_set, set_paused, temporary_get,
 temporary_has, temporary_remove, temporary_set, PERSISTENT_BUMP_AMOUNT,
 PERSISTENT_TTL_THRESHOLD, TEMPORARY_BUMP_AMOUNT, TEMPORARY_TTL_THRESHOLD,
+};
+pub use snapshot::{
+    capture_snapshot, chain_hash, compute_state_root, export_snapshots, genesis_hash as snapshot_genesis_hash,
+    get_snapshot, head as snapshot_head, is_registered_signer, register_signer, revoke_signer,
+    verify_chain as verify_snapshot_chain, verify_export as verify_snapshot_export,
+    SignedStateSnapshot, SnapshotError, SnapshotExportBundle, SnapshotField, SnapshotHead,
+    SnapshotVerificationFailure, SnapshotVerificationReport, DEFAULT_SNAPSHOT_EXPORT_LIMIT,
+    MAX_SNAPSHOT_EXPORT_LIMIT, MAX_SNAPSHOT_FIELDS, MAX_VERIFY_SNAPSHOTS, SNAPSHOT_DOMAIN,
+    SNAPSHOT_SCHEMA_VERSION,
 };
 pub use stale_state::{
     check_before_replay, complete_operation, detect as detect_stale_state,
@@ -399,3 +467,9 @@ mod test_invariant_properties;
 // Load tests for high-cardinality workflows (Issue #353).
 #[cfg(test)]
 mod test_load_high_cardinality;
+// Edge-case fixtures for the ledger-sequence harness (Issue #335).
+#[cfg(test)]
+mod test_ledger_fixtures;
+// Schema-compatibility tests for versioned domain events (Issue #337).
+#[cfg(test)]
+mod test_domain_events;

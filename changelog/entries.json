@@ -178,5 +178,77 @@
     "migration_notes": "",
     "issue": 250,
     "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented signed, hash-chained state snapshot export for audit/debugging: Ed25519 signer registry, per-module chained capture, chain re-derivation, and a bounded storage-free-verifiable export bundle in shared::snapshot (Issue #301).",
+    "migration_notes": "",
+    "issue": 301,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented authorized dependency health-check reporting and a retry/circuit-breaker budget for degraded-mode fallback: admin-managed reporter registry and a bounded retry budget in shared::health_guard (#334).",
+    "migration_notes": "",
+    "issue": 334,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented dead-letter recovery for failed domain-event handlers: captures handler failures instead of propagating them, a permissionless backoff retry, and admin-gated requeue/discard in shared::event_dead_letter (#335).",
+    "migration_notes": "",
+    "issue": 335,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented request validation for cross-repo Trellis clients: schema-version checks, field/semantic validation, caller-identity authorization, and a generic idempotent retry wrapper in shared::client_validation (#336).",
+    "migration_notes": "",
+    "issue": 336,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented rollback verification for failed multi-step/cross-contract initialization: tracked steps, operator-probe verification, and the only gated path to a verified RolledBack state in shared::init_rollback (#337).",
+    "migration_notes": "",
+    "issue": 337,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented bounded iteration protection for storage scans: a hard ceiling on shared::pagination's max_scan, an admin-configurable per-scope limit, and a generic resumable offset scan in shared::scan_guard (#338).",
+    "migration_notes": "",
+    "issue": 338,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented batch partial-failure reporting and retry on shared::batch: an addressable per-recipient failure report, and a forced non-atomic retry of just the retryable entries in shared::batch_retry (#339).",
+    "migration_notes": "",
+    "issue": 339,
+    "pr": null
+  },
+  {
+    "version": "unreleased",
+    "date": "2026-10-21",
+    "impact": "compatible",
+    "summary": "Implemented an on-chain, queryable protocol changelog complementing changelog/entries.json: admin-gated, immutable entries with a supersedes correction path in shared::protocol_changelog (#340).",
+    "migration_notes": "",
+    "issue": 340,
+    "pr": null
   }
 ]

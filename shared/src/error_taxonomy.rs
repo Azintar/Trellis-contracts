@@ -322,6 +322,76 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 "This aid record is not yet eligible for settlement.",
                 Some("Retry after the aid record's expiry time."),
             ),
+            108 => definition(
+                "INVALID_CORRELATION_ID",
+                ErrorCategory::Validation,
+                false,
+                "The correlation ID is malformed or not allowed.",
+                Some("Send a valid 32-byte correlation ID, or omit it."),
+            ),
+            109 => definition(
+                "UNSUPPORTED_SCHEMA",
+                ErrorCategory::Configuration,
+                false,
+                "This record uses a schema version this service does not support.",
+                Some("Upgrade the client to a supported schema version."),
+            ),
+            110 => definition(
+                "SCHEMA_MIGRATION_FAILED",
+                ErrorCategory::Internal,
+                false,
+                "The record could not be migrated to the current schema.",
+                Some("Do not retry unchanged. Contact a maintainer with the reference ID."),
+            ),
+            111 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "One or more request values are not valid.",
+                Some("Review the request fields and submit corrected values."),
+            ),
+            112 => definition(
+                "BATCH_TOO_LARGE",
+                ErrorCategory::Validation,
+                false,
+                "The batch contains more operations than allowed.",
+                Some("Split the batch into smaller groups and submit each group."),
+            ),
+            113 => definition(
+                "EMPTY_BATCH",
+                ErrorCategory::Validation,
+                false,
+                "The batch contains no operations.",
+                Some("Add at least one operation to the batch."),
+            ),
+            114 => definition(
+                "NOT_MILESTONE_BASED",
+                ErrorCategory::Validation,
+                false,
+                "This aid does not use milestones.",
+                Some("Use the standard claim flow for this aid."),
+            ),
+            115 => definition(
+                "INVALID_MILESTONE",
+                ErrorCategory::Validation,
+                false,
+                "The requested milestone does not exist.",
+                Some("Check the milestone index and submit it again."),
+            ),
+            116 => definition(
+                "MILESTONE_NOT_VERIFIED",
+                ErrorCategory::Settlement,
+                true,
+                "This milestone has not been verified yet.",
+                Some("Wait for an authorized inspector to verify the milestone, then retry."),
+            ),
+            117 => definition(
+                "MILESTONE_ALREADY_CLAIMED",
+                ErrorCategory::Conflict,
+                false,
+                "This milestone has already been claimed.",
+                Some("No action is needed. Check the aid's claim history."),
+            ),
             _ => return None,
         }),
         ErrorDomain::Oracle => Some(match code {
@@ -381,6 +451,27 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 "This service has already been initialized.",
                 Some("Contact a maintainer if the initialization is unexpected."),
             ),
+            505 => definition(
+                "INVALID_PRICE",
+                ErrorCategory::Validation,
+                false,
+                "The submitted price is not valid.",
+                Some("Submit a positive price within the allowed range."),
+            ),
+            506 => definition(
+                "INVALID_DECIMALS",
+                ErrorCategory::Validation,
+                false,
+                "The price precision is not supported.",
+                Some("Submit the price using the feed's configured decimals."),
+            ),
+            511 => definition(
+                "INVALID_QUORUM",
+                ErrorCategory::Validation,
+                false,
+                "The quorum setting is not valid for this feed.",
+                Some("Choose a quorum the feed's submitter set can satisfy."),
+            ),
             _ => return None,
         }),
         ErrorDomain::AccessControl => Some(match code {
@@ -425,6 +516,97 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 false,
                 "The operation could not be completed.",
                 Some("Contact support and provide the reference ID."),
+            ),
+            201 => definition(
+                "ROLE_ALREADY_EXISTS",
+                ErrorCategory::Conflict,
+                false,
+                "That role already exists.",
+                Some("Use the existing role or choose a different role name."),
+            ),
+            202 => definition(
+                "ALREADY_MEMBER",
+                ErrorCategory::Conflict,
+                false,
+                "This account already holds the role.",
+                Some("No action is needed. Check the account's current roles."),
+            ),
+            203 => definition(
+                "NOT_MEMBER",
+                ErrorCategory::NotFound,
+                false,
+                "This account does not hold the role.",
+                Some("Check the account address and role name."),
+            ),
+            204 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "A role cannot be a parent of itself.",
+                Some("Choose a different parent role."),
+            ),
+            215 => definition(
+                "CONTRACT_PAUSED",
+                ErrorCategory::Conflict,
+                true,
+                "This operation is temporarily paused.",
+                Some("Try again after the pause is lifted."),
+            ),
+            216 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "The pause scope is not recognised.",
+                Some("Use one of the documented pause scopes."),
+            ),
+            217 => definition(
+                "INVALID_ROLE_STATE",
+                ErrorCategory::Conflict,
+                false,
+                "This operation is not paused, so there is nothing to resume.",
+                Some("No action is needed."),
+            ),
+            218 => definition(
+                "NO_PENDING_TRANSFER",
+                ErrorCategory::NotFound,
+                false,
+                "No ownership transfer is pending.",
+                Some("Propose a new ownership transfer if one is needed."),
+            ),
+            219 => definition(
+                "TRANSFER_EXPIRED",
+                ErrorCategory::Conflict,
+                false,
+                "The pending ownership transfer has expired.",
+                Some("Propose the transfer again."),
+            ),
+            220 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Only the proposed new owner can accept this transfer.",
+                Some("Accept the transfer from the proposed owner's account."),
+            ),
+            221 => definition(
+                "TRANSFER_ALREADY_PENDING",
+                ErrorCategory::Conflict,
+                false,
+                "An ownership transfer is already pending.",
+                Some("Accept or cancel the pending transfer before proposing another."),
+            ),
+            222 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "The expiry time is not valid.",
+                Some("Submit an expiry time in the future."),
+            ),
+            223 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "The role duration is not valid.",
+                Some("Submit a duration greater than zero."),
             ),
             _ => return None,
         }),
@@ -485,6 +667,41 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 "This action is temporarily unavailable while the service is paused.",
                 Some("Try again after the service has resumed."),
             ),
+            2006 => definition(
+                "INVALID_METADATA_HASH",
+                ErrorCategory::Validation,
+                false,
+                "The metadata hash is not valid.",
+                Some("Submit a 32-byte metadata hash in the documented format."),
+            ),
+            2007 => definition(
+                "INVALID_ROYALTY",
+                ErrorCategory::Validation,
+                false,
+                "The royalty rate is outside the allowed range.",
+                Some("Submit a royalty rate within the documented maximum."),
+            ),
+            2008 => definition(
+                "INVALID_EXTENSION_WINDOW",
+                ErrorCategory::Validation,
+                false,
+                "The auction extension window is not valid.",
+                Some("Submit an extension window within the documented limits."),
+            ),
+            2017 => definition(
+                "INVALID_DUTCH_PRICES",
+                ErrorCategory::Validation,
+                false,
+                "The Dutch auction prices are not valid.",
+                Some("Set a starting price higher than the ending price."),
+            ),
+            2018 => definition(
+                "INVALID_AMOUNT",
+                ErrorCategory::Validation,
+                false,
+                "The amount is not valid.",
+                Some("Submit an amount within the allowed range."),
+            ),
             _ => return None,
         }),
         ErrorDomain::Upgradeability => Some(match code {
@@ -522,6 +739,34 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 false,
                 "The upgrade could not be safely applied.",
                 Some("Do not retry until a maintainer has reviewed the migration."),
+            ),
+            912 => definition(
+                "UPGRADE_VALIDATION_FAILED",
+                ErrorCategory::Internal,
+                false,
+                "The upgrade did not pass post-upgrade checks.",
+                Some("Do not retry automatically. Contact a maintainer with the reference ID."),
+            ),
+            913 => definition(
+                "UPGRADE_ROLLED_BACK",
+                ErrorCategory::Internal,
+                false,
+                "The upgrade was rolled back after a failed check.",
+                Some("The previous version stays active. Review the reference ID first."),
+            ),
+            914 => definition(
+                "VALIDATION_FAILED",
+                ErrorCategory::Validation,
+                false,
+                "The timelock delay is outside the allowed range.",
+                Some("Submit a delay within the documented bounds."),
+            ),
+            915 => definition(
+                "TIMELOCK_NOT_EXPIRED",
+                ErrorCategory::Conflict,
+                true,
+                "The upgrade timelock has not expired yet.",
+                Some("Wait until the timelock expires, then execute the upgrade."),
             ),
             _ => return None,
         }),
@@ -641,6 +886,13 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 "External identifier exceeds the 64-byte limit.",
                 Some("Shorten external IDs to 64 bytes or fewer."),
             ),
+            949 => definition(
+                "INVALID_RECIPIENT",
+                ErrorCategory::Validation,
+                false,
+                "A recipient in this import is not valid.",
+                Some("Correct the recipient in the source row and resubmit the import."),
+            ),
             _ => return None,
         }),
         ErrorDomain::Export => Some(match code {
@@ -692,6 +944,55 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
                 false,
                 "The export request contains invalid parameters.",
                 Some("Review the request parameters and submit corrected values."),
+            ),
+            928 => definition(
+                "EXPORT_CANCELLED",
+                ErrorCategory::Conflict,
+                false,
+                "This export was cancelled by an operator.",
+                Some("Start a new export if the data is still needed."),
+            ),
+            929 => definition(
+                "EXPORT_FORBIDDEN_FIELD",
+                ErrorCategory::Validation,
+                false,
+                "The export includes a field that cannot be shared.",
+                Some("Remove restricted fields from the request and export again."),
+            ),
+            930 => definition(
+                "EXPORT_SESSION_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "The export session does not exist or has ended.",
+                Some("Start a new export session."),
+            ),
+            931 => definition(
+                "EXPORT_CHUNK_TOO_LARGE",
+                ErrorCategory::Validation,
+                false,
+                "This chunk is larger than the allowed size.",
+                Some("Send smaller chunks and retry."),
+            ),
+            932 => definition(
+                "EXPORT_SESSION_INACTIVE",
+                ErrorCategory::Conflict,
+                false,
+                "The export session is no longer active.",
+                Some("Start a new export session."),
+            ),
+            933 => definition(
+                "EXPORT_CURSOR_MISMATCH",
+                ErrorCategory::Conflict,
+                false,
+                "The chunk does not follow the expected export position.",
+                Some("Resume from the last confirmed cursor."),
+            ),
+            934 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "You are not authorized to export data from this module.",
+                Some("Use an account with export access to this module."),
             ),
             _ => return None,
         }),
@@ -752,7 +1053,6 @@ pub fn describe_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aid::AidError;
     use crate::batch::BatchError;
 
     fn correlation_id(env: &Env) -> BytesN<32> {
@@ -955,12 +1255,12 @@ mod tests {
     fn contract_error_ranges_have_stable_domain_mappings() {
         let env = Env::default();
         let ranges = [
-            (ErrorDomain::Aid, 100, 107),
-            (ErrorDomain::AccessControl, 200, 214),
-            (ErrorDomain::Oracle, 500, 510),
-            (ErrorDomain::Upgradeability, 900, 911),
-            (ErrorDomain::Import, 940, 948),
-            (ErrorDomain::Export, 920, 927),
+            (ErrorDomain::Aid, 100, 117),
+            (ErrorDomain::AccessControl, 200, 223),
+            (ErrorDomain::Oracle, 500, 511),
+            (ErrorDomain::Upgradeability, 900, 915),
+            (ErrorDomain::Import, 940, 949),
+            (ErrorDomain::Export, 920, 934),
             (ErrorDomain::Marketplace, 2000, 2023),
         ];
 
@@ -984,7 +1284,8 @@ mod tests {
             (ErrorDomain::Shared, Error::InvalidArgument as u32),
             (ErrorDomain::Payments, Error::Expired as u32),
             (ErrorDomain::Batch, BatchError::BatchTooLarge as u32),
-            (ErrorDomain::Aid, AidError::Unauthorized as u32),
+            // Aid `Unauthorized`; the aid contract is not a dependency of `shared`.
+            (ErrorDomain::Aid, 100),
         ];
 
         for (domain, raw_code) in samples {
@@ -1011,12 +1312,12 @@ mod tests {
     fn every_documented_code_has_a_recovery_hint() {
         let env = Env::default();
         let ranges = [
-            (ErrorDomain::Aid, 100, 107),
-            (ErrorDomain::AccessControl, 200, 214),
-            (ErrorDomain::Oracle, 500, 510),
-            (ErrorDomain::Upgradeability, 900, 911),
-            (ErrorDomain::Export, 920, 927),
-            (ErrorDomain::Import, 940, 948),
+            (ErrorDomain::Aid, 100, 117),
+            (ErrorDomain::AccessControl, 200, 223),
+            (ErrorDomain::Oracle, 500, 511),
+            (ErrorDomain::Upgradeability, 900, 915),
+            (ErrorDomain::Export, 920, 934),
+            (ErrorDomain::Import, 940, 949),
             (ErrorDomain::Marketplace, 2000, 2023),
         ];
 
@@ -1034,5 +1335,34 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn newly_explained_rejections_keep_category_and_retry_policy() {
+        let env = Env::default();
+
+        let milestone = describe_error(&env, ErrorDomain::Aid, 116, correlation_id(&env));
+        assert_eq!(
+            milestone.code,
+            String::from_str(&env, "MILESTONE_NOT_VERIFIED")
+        );
+        assert_eq!(milestone.category, ErrorCategory::Settlement);
+        assert!(milestone.retryable);
+
+        let transfer = describe_error(&env, ErrorDomain::AccessControl, 220, correlation_id(&env));
+        assert_eq!(transfer.category, ErrorCategory::Authorization);
+        assert!(!transfer.retryable);
+
+        let timelock = describe_error(&env, ErrorDomain::Upgradeability, 915, correlation_id(&env));
+        assert_eq!(timelock.category, ErrorCategory::Conflict);
+        assert!(timelock.retryable);
+
+        let cancelled = describe_error(&env, ErrorDomain::Export, 928, correlation_id(&env));
+        assert_eq!(cancelled.code, String::from_str(&env, "EXPORT_CANCELLED"));
+        assert!(!cancelled.retryable);
+
+        let dutch = describe_error(&env, ErrorDomain::Marketplace, 2017, correlation_id(&env));
+        assert_eq!(dutch.code, String::from_str(&env, "INVALID_DUTCH_PRICES"));
+        assert_eq!(dutch.category, ErrorCategory::Validation);
     }
 }
