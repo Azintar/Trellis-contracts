@@ -59,13 +59,14 @@ canonical client mapping ranges are:
 | Domain | Raw-code namespace | Error enum |
 |:---|---|:---|
 | `Shared` | `1-28`, `950-952`, `1000-1008` | `shared::errors::Error` |
-| `Aid` | `100-107` | `contracts/aid-contract::AidError` |
-| `AccessControl` | `200-214` | `contracts/access-control::AccessControlError` |
-| `Oracle` | `500-510` | `contracts/oracle-contract::OracleError` |
+| `Aid` | `100-117` | `contracts/aid-contract::AidError` |
+| `AccessControl` | `200-223` | `contracts/access-control::AccessControlError` |
+| `Oracle` | `500-511` | `contracts/oracle-contract::OracleError` |
 | `Payments` | `700-711` | `shared::errors::Error` |
 | `Batch` | `800-805` | `shared::batch::BatchError` |
-| `Upgradeability` | `900-911` | `contracts/upgradeability::UpgradeError` |
-| `Import` | `940-948` | `shared::import::ImportError` |
+| `Upgradeability` | `900-915` | `contracts/upgradeability::UpgradeError` |
+| `Import` | `940-949` | `shared::import::ImportError` |
+| `Export` | `920-934` | `shared::export::ExportError` |
 | `Marketplace` | `2000-2023` | `contracts/nft-marketplace::MarketError` |
 
 Not every number inside a range is assigned. Additive changes require a new
