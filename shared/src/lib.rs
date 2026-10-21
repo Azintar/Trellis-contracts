@@ -107,6 +107,8 @@ pub use canonical::{
 canonical_bytes, canonical_fingerprint, canonicalize_legacy, ensure_supported_encoding,
 is_legacy_encoding, normalize_int, normalize_text, parse_legacy_kv, CanonicalPart,
 CANONICAL_ENCODING_VERSION, LEGACY_ENCODING_VERSION, MAX_FIELD_LEN,
+canonical_bytes_strict, normalize_text_strict, verify_canonical_fingerprint,
+MAX_CANONICAL_PARTS,
 };
 pub use client::{
 client_schema_fingerprint, format_client_error, AidSummaryResponse, ClientErrorResponse,
@@ -385,3 +387,15 @@ mod test_projection_repair;
 pub mod ledger_sequence;
 #[cfg(test)]
 mod test_ledger_sequence;
+// Strict canonical-encoding checks for signed and hashed payloads (Issue #351).
+#[cfg(test)]
+mod test_canonical;
+// Redaction coverage for wallet, secret, and transaction data (Issue #352).
+#[cfg(test)]
+mod test_redaction;
+// Property tests for financial and ownership invariants (Issue #350).
+#[cfg(test)]
+mod test_invariant_properties;
+// Load tests for high-cardinality workflows (Issue #353).
+#[cfg(test)]
+mod test_load_high_cardinality;
