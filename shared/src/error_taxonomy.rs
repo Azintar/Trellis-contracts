@@ -770,13 +770,245 @@ fn domain_definition(domain: &ErrorDomain, code: u32) -> Option<Definition> {
             ),
             _ => return None,
         }),
-        ErrorDomain::Payments if code == Error::Expired as u32 => Some(definition(
-            "SETTLEMENT_TIMEOUT",
-            ErrorCategory::Settlement,
-            true,
-            "Settlement confirmation was not received.",
-            Some("Retry the pending settlement without submitting another transfer."),
-        )),
+        ErrorDomain::Payments => Some(match code {
+            x if x == Error::Expired as u32 => definition(
+                "SETTLEMENT_TIMEOUT",
+                ErrorCategory::Settlement,
+                true,
+                "Settlement confirmation was not received.",
+                Some("Retry the pending settlement without submitting another transfer."),
+            ),
+            700 => definition(
+                "INVALID_AMOUNT",
+                ErrorCategory::Validation,
+                false,
+                "The payment amount is not valid.",
+                Some("Submit a strictly positive payment amount."),
+            ),
+            701 => definition(
+                "INSUFFICIENT_BALANCE",
+                ErrorCategory::Settlement,
+                true,
+                "Sender has insufficient balance for this payment.",
+                Some("Top up token balance and retry the transfer."),
+            ),
+            702 => definition(
+                "ESCROW_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "The specified escrow deposit does not exist.",
+                Some("Verify the escrow identifier before retrying."),
+            ),
+            703 => definition(
+                "ESCROW_ALREADY_RELEASED",
+                ErrorCategory::Conflict,
+                false,
+                "This escrow has already been released.",
+                Some("No action needed; check escrow completion status."),
+            ),
+            704 => definition(
+                "ESCROW_ALREADY_REFUNDED",
+                ErrorCategory::Conflict,
+                false,
+                "This escrow has already been refunded.",
+                Some("No action needed; funds were returned to depositor."),
+            ),
+            705 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Caller is not authorized to release or refund this escrow.",
+                Some("Authenticate with the depositor or beneficiary account."),
+            ),
+            706 => definition(
+                "ESCROW_EXPIRED",
+                ErrorCategory::Conflict,
+                false,
+                "The escrow has expired and cannot be released.",
+                Some("Request a refund or create a new escrow."),
+            ),
+            707 => definition(
+                "ESCROW_NOT_EXPIRED",
+                ErrorCategory::Conflict,
+                true,
+                "The escrow has not yet expired and cannot be refunded.",
+                Some("Wait until after the expiry ledger has elapsed to claim refund."),
+            ),
+            708 => definition(
+                "INVALID_FEE_RATE",
+                ErrorCategory::Validation,
+                false,
+                "The fee basis-point rate is out of the valid 0-10,000 range.",
+                Some("Provide a valid fee rate between 0 and 10,000 bps."),
+            ),
+            709 => definition(
+                "CALCULATION_OVERFLOW",
+                ErrorCategory::Internal,
+                false,
+                "Fee calculation resulted in arithmetic overflow.",
+                Some("Reduce payment amount or contact support."),
+            ),
+            710 => definition(
+                "ID_OVERFLOW",
+                ErrorCategory::Internal,
+                false,
+                "Escrow identifier counter overflowed.",
+                Some("Contact protocol administrator."),
+            ),
+            711 => definition(
+                "UNSUPPORTED_TOKEN",
+                ErrorCategory::Configuration,
+                false,
+                "The requested token is not supported by this payment gateway.",
+                Some("Use a whitelisted payment token address."),
+            ),
+            _ => return None,
+        }),
+        ErrorDomain::Treasury => Some(match code {
+            300 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Caller is not authorized to perform treasury vault operations.",
+                Some("Ensure caller holds the required Treasury Admin or Operator role."),
+            ),
+            301 => definition(
+                "INSUFFICIENT_FUNDS",
+                ErrorCategory::Settlement,
+                true,
+                "The treasury vault balance is insufficient for this disbursement.",
+                Some("Deposit additional liquidity into the vault before retrying."),
+            ),
+            302 => definition(
+                "WITHDRAWAL_LIMIT_EXCEEDED",
+                ErrorCategory::Conflict,
+                true,
+                "The requested withdrawal amount exceeds configured per-transaction limit.",
+                Some("Reduce withdrawal amount or request budget ceiling increase."),
+            ),
+            303 => definition(
+                "TIMELOCK_ACTIVE",
+                ErrorCategory::Conflict,
+                true,
+                "The scheduled treasury withdrawal timelock has not elapsed.",
+                Some("Wait for timelock window to open before executing."),
+            ),
+            304 => definition(
+                "PROPOSAL_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "The scheduled treasury action proposal does not exist.",
+                Some("Verify the proposal identifier."),
+            ),
+            305 => definition(
+                "ALREADY_EXECUTED",
+                ErrorCategory::Conflict,
+                false,
+                "This treasury proposal has already been executed.",
+                Some("Review treasury ledger audit history."),
+            ),
+            _ => return None,
+        }),
+        ErrorDomain::Governance => Some(match code {
+            400 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Caller is not authorized to create or vote on governance proposals.",
+                Some("Ensure voting keys are registered and hold governance power."),
+            ),
+            401 => definition(
+                "PROPOSAL_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "The requested governance proposal does not exist.",
+                Some("Check proposal ID and query proposal index."),
+            ),
+            402 => definition(
+                "ALREADY_VOTED",
+                ErrorCategory::Conflict,
+                false,
+                "Caller has already cast a vote for this proposal.",
+                Some("Votes are immutable once recorded."),
+            ),
+            403 => definition(
+                "BELOW_THRESHOLD",
+                ErrorCategory::Settlement,
+                true,
+                "Proposal has not yet met the required approval quorum.",
+                Some("Await additional voter participation."),
+            ),
+            404 => definition(
+                "PROPOSAL_EXPIRED",
+                ErrorCategory::Conflict,
+                false,
+                "The voting window for this proposal has expired.",
+                Some("Submit a new governance proposal if needed."),
+            ),
+            405 => definition(
+                "PROPOSAL_CANCELLED",
+                ErrorCategory::Conflict,
+                false,
+                "This proposal was cancelled by its author or admin.",
+                Some("Review governance forum notes."),
+            ),
+            _ => return None,
+        }),
+        ErrorDomain::Referral => Some(match code {
+            600 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Caller is not authorized to register or configure referral tiers.",
+                Some("Authenticate with referral manager credentials."),
+            ),
+            601 => definition(
+                "REFERRAL_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "Referral code or affiliate record was not found.",
+                Some("Verify referral code spelling and status."),
+            ),
+            602 => definition(
+                "REFERRER_ALREADY_SET",
+                ErrorCategory::Conflict,
+                false,
+                "This account has already bound a referrer.",
+                Some("Affiliate bindings are single-assignment and permanent."),
+            ),
+            603 => definition(
+                "INVALID_TIER",
+                ErrorCategory::Validation,
+                false,
+                "Referral tier configuration is invalid.",
+                Some("Review commission basis-points and threshold ranges."),
+            ),
+            _ => return None,
+        }),
+        ErrorDomain::Registry => Some(match code {
+            1100 => definition(
+                "UNAUTHORIZED",
+                ErrorCategory::Authorization,
+                false,
+                "Caller is not authorized to modify the contract registry.",
+                Some("Authenticate with registry owner or admin account."),
+            ),
+            1101 => definition(
+                "CONTRACT_NOT_FOUND",
+                ErrorCategory::NotFound,
+                false,
+                "The requested contract name or service key is not registered.",
+                Some("Check service registration directory."),
+            ),
+            1102 => definition(
+                "CONTRACT_ALREADY_REGISTERED",
+                ErrorCategory::Conflict,
+                false,
+                "A contract with this name is already active in the registry.",
+                Some("Update the existing entry or use a unique service identifier."),
+            ),
+            _ => return None,
+        }),
         ErrorDomain::Batch => Some(match code {
             800 => definition(
                 "BATCH_TOO_LARGE",
@@ -1364,5 +1596,34 @@ mod tests {
         let dutch = describe_error(&env, ErrorDomain::Marketplace, 2017, correlation_id(&env));
         assert_eq!(dutch.code, String::from_str(&env, "INVALID_DUTCH_PRICES"));
         assert_eq!(dutch.category, ErrorCategory::Validation);
+
+        // Verify Issue #329 domains: Payments, Treasury, Governance, Referral, Registry
+        let pay_err = describe_error(&env, ErrorDomain::Payments, 700, correlation_id(&env));
+        assert_eq!(pay_err.code, String::from_str(&env, "INVALID_AMOUNT"));
+        assert_eq!(pay_err.category, ErrorCategory::Validation);
+        assert!(!pay_err.retryable);
+
+        let pay_retry = describe_error(&env, ErrorDomain::Payments, 701, correlation_id(&env));
+        assert_eq!(pay_retry.code, String::from_str(&env, "INSUFFICIENT_BALANCE"));
+        assert_eq!(pay_retry.category, ErrorCategory::Settlement);
+        assert!(pay_retry.retryable);
+
+        let treas_err = describe_error(&env, ErrorDomain::Treasury, 300, correlation_id(&env));
+        assert_eq!(treas_err.code, String::from_str(&env, "UNAUTHORIZED"));
+        assert_eq!(treas_err.category, ErrorCategory::Authorization);
+        assert!(!treas_err.retryable);
+
+        let gov_err = describe_error(&env, ErrorDomain::Governance, 401, correlation_id(&env));
+        assert_eq!(gov_err.code, String::from_str(&env, "PROPOSAL_NOT_FOUND"));
+        assert_eq!(gov_err.category, ErrorCategory::NotFound);
+
+        let ref_err = describe_error(&env, ErrorDomain::Referral, 603, correlation_id(&env));
+        assert_eq!(ref_err.code, String::from_str(&env, "INVALID_TIER"));
+        assert_eq!(ref_err.category, ErrorCategory::Validation);
+
+        let reg_err = describe_error(&env, ErrorDomain::Registry, 1101, correlation_id(&env));
+        assert_eq!(reg_err.code, String::from_str(&env, "CONTRACT_NOT_FOUND"));
+        assert_eq!(reg_err.category, ErrorCategory::NotFound);
     }
 }
+
