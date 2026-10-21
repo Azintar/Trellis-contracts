@@ -300,39 +300,44 @@ pub enum LabelClass {
 
 /// Returns true if the label key is known to be high-cardinality and therefore
 /// unsafe to use as a raw metric dimension.
+///
+/// Terms are matched case-insensitively as substrings so compound names such
+/// as `wallet_address` or `user_id_hash` cannot slip past the denylist. The
+/// two-letter `ip` term is matched exactly, because as a substring it would
+/// flag unrelated words such as `ship`.
 #[inline]
 fn is_high_cardinality_key(key: &Bytes) -> bool {
-    // Keys are matched case-insensitively against a small denylist of
-    // identifiers that would explode metric cardinality if used as labels.
     const HIGH_CARDINALITY: &[&[u8]] = &[
         b"user_id",
         b"userid",
         b"account",
-        b"account_id",
         b"address",
         b"wallet",
         b"tx_hash",
         b"txhash",
-        b"transaction_id",
+        b"transaction",
         b"request_id",
         b"trace_id",
         b"session_id",
         b"nonce",
         b"timestamp",
         b"email",
-        b"ip",
-        b"ip_address",
     ];
     for &k in HIGH_CARDINALITY {
-        if key.len() == k.len() as u32 && contains_case_insensitive(key, k) {
+        if contains_case_insensitive(key, k) {
             return true;
         }
     }
-    false
+    key.len() == 2 && contains_case_insensitive(key, b"ip")
 }
 
 /// Returns true if the label key names a sensitive field whose value must be
 /// redacted before being emitted to logs or metrics.
+///
+/// Matching follows the same rules as [`is_high_cardinality_key`]: secret
+/// material and wallet or transaction identifiers are caught inside compound
+/// keys such as `wallet_secret` or `tx_signature`. `auth` is exact-match only,
+/// so that ordinary words such as `author` are not redacted.
 #[inline]
 fn is_sensitive_key(key: &Bytes) -> bool {
     const SENSITIVE: &[&[u8]] = &[
@@ -347,17 +352,20 @@ fn is_sensitive_key(key: &Bytes) -> bool {
         b"seed",
         b"mnemonic",
         b"authorization",
-        b"auth",
         b"cookie",
         b"signature",
         b"signing_key",
+        b"wallet",
+        b"transaction",
+        b"tx_hash",
+        b"txhash",
     ];
     for &k in SENSITIVE {
-        if key.len() == k.len() as u32 && contains_case_insensitive(key, k) {
+        if contains_case_insensitive(key, k) {
             return true;
         }
     }
-    false
+    key.len() == 4 && contains_case_insensitive(key, b"auth")
 }
 
 /// Validates a telemetry event name: bounded length, no control characters,

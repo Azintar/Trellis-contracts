@@ -125,6 +125,8 @@ pub use canonical::{
 canonical_bytes, canonical_fingerprint, canonicalize_legacy, ensure_supported_encoding,
 is_legacy_encoding, normalize_int, normalize_text, parse_legacy_kv, CanonicalPart,
 CANONICAL_ENCODING_VERSION, LEGACY_ENCODING_VERSION, MAX_FIELD_LEN,
+canonical_bytes_strict, normalize_text_strict, verify_canonical_fingerprint,
+MAX_CANONICAL_PARTS,
 };
 pub use client::{
 client_schema_fingerprint, format_client_error, AidSummaryResponse, ClientErrorResponse,
@@ -159,11 +161,7 @@ FailureSeverity, FailureState, HealthCategory, OperationType, PartialFailure,
 RedactedDeadLetter, RedactedPartialFailure,
 };
 pub use disclosure::{DetailField, DetailSeverity, TransactionDetail, TransactionDetailBuilder};
-pub use error_taxonomy::{
-    describe_error, problem_details, remediation_hint, ErrorCategory, ErrorDomain, ErrorInfo,
-    ProblemDetails, ProblemDetailsCode, ProblemDetailsRegistry, ProblemDetailsSpec,
-    PROBLEM_DETAILS_SCHEMA_VERSION,
-};
+pub use error_taxonomy::{describe_error, ErrorCategory, ErrorDomain, ErrorInfo};
 pub use errors::Error;
 pub use export::{
 authorize_export, authorize_module_export, cancel_export_stream, create_export,
@@ -179,6 +177,15 @@ DEFAULT_EXPORT_TTL_LEDGERS, DEFAULT_MAX_EXPORT_RECORDS, EXPORT_SCHEMA_V1,
 MAX_EXPORT_CHUNK_SIZE, MAX_EXPORT_TTL_LEDGERS, MAX_SUPPORTED_EXPORT_SCHEMA_VERSION,
 MIN_SUPPORTED_EXPORT_SCHEMA_VERSION,
 };
+pub use events::{
+emit, emit_collection_registered, emit_import_committed, emit_import_failed,
+emit_import_simulated, emit_nft_auction, emit_nft_bid, emit_nft_listed, emit_nft_offer,
+emit_nft_settle, emit_nft_sold, emit_royalty_paid, AID_CLAIMED, AID_CREATED, AID_REFUNDED,
+AID_SETTLED, COMMISSION_PAID, CONTRACT_PAUSED, CONTRACT_RESUMED, CONTRACT_UPGRADED,
+IMPORT_COMMITTED, IMPORT_FAILED, IMPORT_SIMULATED, PARAMETER_CHANGED, PAYMENT_ESCROW_CREATED,
+PAYMENT_ESCROW_REFUNDED, PAYMENT_ESCROW_RELEASED, PAYMENT_FEE, PAYMENT_TRANSFER,
+REFERRAL_ACCRUED, REFERRAL_REGISTERED, REFERRER_SET, TIER_CONFIG_SET, TREASURY_DEPOSIT,
+TREASURY_EMERGENCY_WITHDRAW, TREASURY_SET, TREASURY_WITHDRAW,
 pub use event_dead_letter::{
     dead_letter_ids as event_dead_letter_ids, discard_dead_letter as discard_event_dead_letter,
     dispatch_event, get_dead_letter as get_event_dead_letter, pending_dead_letter_ids,
@@ -212,6 +219,7 @@ ImpersonationSession, ResourceScope, ResourceType, SessionParams, SessionResult,
 DEFAULT_SESSION_DURATION, MAX_CONCURRENT_SESSIONS, MAX_SESSION_DURATION,
 };
 pub use import::{
+compute_batch_fingerprint,
 compute_batch_fingerprint, dry_run as dry_run_import, execute_import,
 generate_rollback_guidance, get_import_counter, get_imported_record, has_imported_record,
 validate_config as validate_import_config, DuplicatePolicy, ImportConfig, ImportError,
@@ -447,6 +455,18 @@ mod test_projection_repair;
 pub mod ledger_sequence;
 #[cfg(test)]
 mod test_ledger_sequence;
+// Strict canonical-encoding checks for signed and hashed payloads (Issue #351).
+#[cfg(test)]
+mod test_canonical;
+// Redaction coverage for wallet, secret, and transaction data (Issue #352).
+#[cfg(test)]
+mod test_redaction;
+// Property tests for financial and ownership invariants (Issue #350).
+#[cfg(test)]
+mod test_invariant_properties;
+// Load tests for high-cardinality workflows (Issue #353).
+#[cfg(test)]
+mod test_load_high_cardinality;
 // Edge-case fixtures for the ledger-sequence harness (Issue #335).
 #[cfg(test)]
 mod test_ledger_fixtures;
