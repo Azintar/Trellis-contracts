@@ -79,11 +79,12 @@ pub use risk_scoring::{
 };
 pub use audit_ledger::{
 append_event, append_financial, append_privileged, checkpoint, entry_hash, export_digest,
-export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint, verify_chain,
-verify_export,
+export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint,
+record_admin_change, verify_admin_receipt, verify_chain, verify_export,
+AdminChangeReceipt, AdminReceiptStatus,
 AuditEventClass, AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerExport,
 AuditLedgerHead, AuditLedgerKey, AuditVerificationFailure, AuditVerificationReport,
-AUDIT_DOMAIN, AUDIT_LEGDER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,
+AUDIT_DOMAIN, AUDIT_LEDGER_SCHEMA_VERSION, DEFAULT_EXPORT_LIMIT, MAX_EXPORT_LIMIT,
 MAX_VERIFY_ENTRIES,
 };
 pub use analytics::{
@@ -97,6 +98,11 @@ require_admin, require_not_paused, require_permission, role_for_permission, set_
 PendingOwnershipTransfer, Permission, Role,
 };
 pub use backfill::{
+advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dedupe_items,
+dry_run as dry_run_backfill, fail_backfill, is_resumable as is_backfill_resumable,
+load_checkpoint as load_backfill_checkpoint, resume_backfill,
+save_checkpoint as save_backfill_checkpoint,
+BackfillAction, BackfillCheckpoint, BackfillDuplicatePolicy, BackfillError,
 advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dry_run as dry_run_backfill,
 fail_backfill, is_resumable as is_backfill_resumable, load_checkpoint as load_backfill_checkpoint,
 save_checkpoint as save_backfill_checkpoint, BackfillAction, BackfillCheckpoint, BackfillError,
@@ -249,7 +255,7 @@ FeeConfig,
 pub use preflight::{
 preflight, require_preflight, requires_preflight, PreflightCheck, PreflightCode,
 PreflightInput, PreflightOperation, PreflightReport, PreflightStatus, RiskLevel,
-EXPIRY_WARNING_WINDOW_LEGEERS, HIGH_VALUE_WARNING_BPS,
+EXPIRY_WARNING_WINDOW_LEDGERS, HIGH_VALUE_WARNING_BPS,
 };
 pub use public_status::{
     get_public_status, set_public_status, PublicStatus, PublicStatusReason, PublicStatusRecord,
