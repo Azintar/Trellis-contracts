@@ -93,9 +93,11 @@ require_admin, require_not_paused, require_permission, role_for_permission, set_
 PendingOwnershipTransfer, Permission, Role,
 };
 pub use backfill::{
-advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dry_run as dry_run_backfill,
-fail_backfill, is_resumable as is_backfill_resumable, load_checkpoint as load_backfill_checkpoint,
-save_checkpoint as save_backfill_checkpoint, BackfillAction, BackfillCheckpoint, BackfillError,
+advance_checkpoint, begin_backfill, clear_checkpoint, complete_backfill, dedupe_items,
+dry_run as dry_run_backfill, fail_backfill, is_resumable as is_backfill_resumable,
+load_checkpoint as load_backfill_checkpoint, resume_backfill,
+save_checkpoint as save_backfill_checkpoint,
+BackfillAction, BackfillCheckpoint, BackfillDuplicatePolicy, BackfillError,
 BackfillItem, BackfillMode, BackfillModule, BackfillPlan, BackfillReport, BackfillStatus,
 };
 pub use batch::{
