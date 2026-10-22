@@ -123,6 +123,7 @@ When tripped, `trigger_auto_rollback` executes atomically:
 3. Sets `health_status = GuardHealthStatus::RolledBack`.
 4. Writes an immutable `RollbackAuditRecord` with failing error code, ledger number, and telemetry snapshot.
 5. Emits contract event: `("rollout", "rollback")` with target symbol, reason code, and error code.
+6. Discards any earlier `RollbackVerificationReceipt`. A receipt proves the state after the rollback it was issued for, so a second rollback leaves no clean verification behind and `rearm_after_verified_rollback` is refused until `verify_rollback` runs again.
 
 ---
 

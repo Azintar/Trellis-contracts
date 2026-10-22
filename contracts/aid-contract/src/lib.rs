@@ -50,6 +50,7 @@ use soroban_sdk::{
 pub mod api;
 pub mod correlation;
 pub mod storage;
+mod transitions;
 pub mod types;
 
 use storage::{get_aid, get_aid_counter, has_aid, set_aid, set_aid_counter};
@@ -103,6 +104,9 @@ pub enum AidError {
     MilestoneNotVerified = 116,
     /// The milestone has already been claimed.
     MilestoneAlreadyClaimed = 117,
+    /// A balance, ownership, or entitlement invariant would be violated; the
+    /// transition was rejected and no state changed.
+    InvariantViolation = 118,
 }
 
 #[contract]
@@ -330,7 +334,9 @@ impl AidContract {
         );
         correlation::store(&env, aid_id, &correlation_id);
         // Escrow funds from donor into contract.
-        token::Client::new(&env, &token).transfer(&donor, &env.current_contract_address(), &amount);
+        if let Err(e) = transitions::escrow_in(&env, &token, &donor, amount) {
+            panic_with_error!(&env, e);
+        }
 
         aid_id
     }
@@ -469,11 +475,7 @@ impl AidContract {
         );
 
         // Consolidated escrow transfer from donor into contract for sum(amounts)
-        token::Client::new(&env, &token).transfer(
-            &donor,
-            &env.current_contract_address(),
-            &total_amount,
-        );
+        transitions::escrow_in(&env, &token, &donor, total_amount)?;
 
         Ok(ids)
     }
@@ -490,6 +492,8 @@ impl AidContract {
     /// - [`AidError::Expired`]        — `expiry_ledger` has passed.
     /// - [`AidError::AlreadyClaimed`] — status is not `Pending`.
     /// - [`AidError::Unauthorized`]   — `recipient` is not the intended recipient.
+    /// - [`AidError::InvalidArgument`] — `aid_id` is a milestone program; its
+    ///   tranches are claimed with [`AidContract::claim_aid_milestone`].
     pub fn claim_aid(env: Env, aid_id: u64, recipient: Address) -> Result<(), AidError> {
         // Pause check first — cheapest read (instance storage, no TTL bump)
         if is_paused(&env) {
@@ -497,12 +501,15 @@ impl AidContract {
         }
         recipient.require_auth();
 
-        let mut record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
+        let record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
         let correlation_id = correlation::load(&env, aid_id);
 
         // Sequence of checks ordered by likely failure rate (cheap first)
         if record.status == AidStatus::Settled || record.status == AidStatus::Refunded {
             return Err(AidError::AlreadyClaimed);
+        }
+        if record.milestone_count > 0 {
+            return Err(AidError::InvalidArgument);
         }
         if env.ledger().sequence() > record.expiry_ledger {
             return Err(AidError::Expired);
@@ -511,8 +518,11 @@ impl AidContract {
             return Err(AidError::Unauthorized);
         }
 
-        record.status = AidStatus::Settled;
-        set_aid(&env, aid_id, &record);
+        let settled = AidRecord {
+            status: AidStatus::Settled,
+            ..record.clone()
+        };
+        transitions::commit(&env, &record, &settled)?;
         remove_from_search_index(&env, aid_id);
 
         token::Client::new(&env, &record.token).transfer(
@@ -548,8 +558,11 @@ impl AidContract {
     /// - [`AidError::AlreadyClaimed`] — already settled.
     /// - [`AidError::AlreadyRefunded`] — already refunded.
     /// - [`AidError::NotExpiredYet`]  — expiry has not yet passed.
+    /// - [`AidError::InvalidArgument`] — `aid_id` is a milestone program; only
+    ///   its unclaimed tranches are refundable, via
+    ///   [`AidContract::refund_milestone_aid`].
     pub fn refund_aid(env: Env, aid_id: u64, caller: Address) -> Result<(), AidError> {
-        let mut record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
+        let record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
         let correlation_id = correlation::load(&env, aid_id);
         caller.require_auth();
 
@@ -564,13 +577,19 @@ impl AidContract {
             AidStatus::Refunded => return Err(AidError::AlreadyRefunded),
             AidStatus::Pending | AidStatus::PartiallyClaimed => {} // continue
         }
+        if record.milestone_count > 0 {
+            return Err(AidError::InvalidArgument);
+        }
 
         if env.ledger().sequence() <= record.expiry_ledger {
             return Err(AidError::NotExpiredYet);
         }
 
-        record.status = AidStatus::Refunded;
-        set_aid(&env, aid_id, &record);
+        let refunded = AidRecord {
+            status: AidStatus::Refunded,
+            ..record.clone()
+        };
+        transitions::commit(&env, &record, &refunded)?;
         remove_from_search_index(&env, aid_id);
 
         token::Client::new(&env, &record.token).transfer(
@@ -668,7 +687,7 @@ impl AidContract {
             expiry_ledger.into(),
         );
 
-        token::Client::new(&env, &token).transfer(&donor, &env.current_contract_address(), &total);
+        transitions::escrow_in(&env, &token, &donor, total)?;
 
         Ok(aid_id)
     }
@@ -709,6 +728,9 @@ impl AidContract {
     }
 
     /// Claim a verified milestone tranche.
+    ///
+    /// The record moves to `PartiallyClaimed` while tranches remain and to
+    /// `Settled` once the last one is paid.
     pub fn claim_aid_milestone(
         env: Env,
         recipient: Address,
@@ -749,7 +771,10 @@ impl AidContract {
         m.claimed = true;
         let amount = m.amount;
         milestones.set(milestone_index, m);
+        let (_, status) = transitions::settle_milestones(&record, &milestones)?;
+        transitions::commit(&env, &record, &AidRecord { status, ..record.clone() })?;
         storage::set_milestones(&env, aid_id, &milestones);
+        remove_from_search_index(&env, aid_id);
 
         token::Client::new(&env, &record.token).transfer(
             &env.current_contract_address(),
@@ -761,17 +786,19 @@ impl AidContract {
         Ok(())
     }
 
-    /// Refund the unclaimed, unverified remainder of an expired milestone aid.
+    /// Refund the unclaimed remainder of an expired milestone aid.
     ///
-    /// Only the donor or admin may call. Transfers the sum of all milestones
-    /// that are neither claimed nor verified back to the donor.
+    /// Only the donor or admin may call. Transfers the sum of all unclaimed
+    /// milestones back to the donor. Verified-but-unclaimed tranches are
+    /// included: claims close at expiry, so leaving them behind would lock
+    /// those funds in the contract permanently.
     pub fn refund_milestone_aid(
         env: Env,
         caller: Address,
         aid_id: u64,
     ) -> Result<(), AidError> {
         caller.require_auth();
-        let mut record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
+        let record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
         let admin = shared::auth::get_admin(&env);
         if caller != record.donor && caller != admin {
             return Err(AidError::Unauthorized);
@@ -788,15 +815,12 @@ impl AidContract {
             return Err(AidError::NotMilestoneBased);
         }
 
-        let mut refundable: i128 = 0;
-        for m in milestones.iter() {
-            if !m.claimed && !m.verified {
-                refundable = refundable.checked_add(m.amount).ok_or(AidError::InvalidArgument)?;
-            }
-        }
-
-        record.status = AidStatus::Refunded;
-        set_aid(&env, aid_id, &record);
+        let (refundable, _) = transitions::settle_milestones(&record, &milestones)?;
+        let refunded = AidRecord {
+            status: AidStatus::Refunded,
+            ..record.clone()
+        };
+        transitions::commit(&env, &record, &refunded)?;
         remove_from_search_index(&env, aid_id);
 
         if refundable > 0 {
@@ -915,11 +939,12 @@ impl AidContract {
     }
 
     /// Delete a completed aid record and its derived discovery entry. Pending
-    /// records cannot be deleted because they still escrow funds.
+    /// and partially claimed records cannot be deleted because they still
+    /// escrow funds.
     pub fn delete_aid(env: Env, admin: Address, aid_id: u64) -> Result<(), AidError> {
         require_admin(&env, &admin)?;
         let record = get_aid(&env, aid_id).ok_or(AidError::NotFound)?;
-        if record.status == AidStatus::Pending {
+        if matches!(record.status, AidStatus::Pending | AidStatus::PartiallyClaimed) {
             return Err(AidError::CannotDeletePending);
         }
         storage::remove_aid(&env, aid_id);
