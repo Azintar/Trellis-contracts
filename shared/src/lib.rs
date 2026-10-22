@@ -216,8 +216,10 @@ pub use health_guard::{
 pub use impersonation::{
 check_action_permission, create_session, get_active_sessions_for_impersonator,
 get_active_sessions_for_user, get_current_impersonation, is_being_impersonated, record_action,
+support_access_notice,
 revoke_session, validate_session, ImpersonationAction, ImpersonationError, ImpersonationScope,
 ImpersonationSession, ResourceScope, ResourceType, SessionParams, SessionResult, SessionState,
+SupportAccessNotice,
 DEFAULT_SESSION_DURATION, MAX_CONCURRENT_SESSIONS, MAX_SESSION_DURATION,
 };
 pub use import::{
