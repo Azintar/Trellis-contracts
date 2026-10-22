@@ -74,6 +74,8 @@ pub enum JobError {
     NotRetryable = 6,
     /// Only the contract admin may manage the worker.
     Unauthorized = 7,
+    /// The supplied payload is not valid for the requested operation.
+    InvalidPayload = 8,
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +88,8 @@ pub enum JobError {
 pub enum JobKind {
     /// Refund an escrow deposit once its expiry ledger has passed.
     EscrowRefund,
+    /// A keyed side effect planned by `shared::dispatcher` (Issue #220).
+    Effect,
     /// Caller-defined work dispatched by a custom [`JobHandler`].
     Custom,
 }
@@ -95,6 +99,7 @@ impl JobKind {
     pub fn as_symbol(&self) -> Symbol {
         match self {
             JobKind::EscrowRefund => symbol_short!("esc_ref"),
+            JobKind::Effect => symbol_short!("effect"),
             JobKind::Custom => symbol_short!("custom"),
         }
     }
@@ -111,6 +116,10 @@ pub enum JobPayload {
     None,
     /// `payments::refund_escrow`: `(token, escrow_id)`.
     EscrowRefund(Address, u64),
+    /// A dispatcher-managed side effect, addressed by its 32-byte effect key
+    /// (Issue #220). The typed effect record lives under the
+    /// `("fx", effect_key)` storage key owned by `shared::dispatcher`.
+    Effect(BytesN<32>),
 }
 
 impl JobPayload {
@@ -119,6 +128,7 @@ impl JobPayload {
         match self {
             JobPayload::None => JobKind::Custom,
             JobPayload::EscrowRefund(_, _) => JobKind::EscrowRefund,
+            JobPayload::Effect(_) => JobKind::Effect,
         }
     }
 }

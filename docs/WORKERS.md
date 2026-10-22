@@ -8,6 +8,10 @@ invocation by anyone willing to pay the fee.
 - Framework: `shared/src/jobs.rs`
 - Tests: `shared/src/test_jobs.rs` (`cargo test -p shared test_jobs`)
 - Local runner: `scripts/run-worker.sh`
+- Side effects of user actions: [`shared::dispatcher`](SIDE_EFFECTS.md) — the
+  keyed layer on top of this framework that guarantees a follow-up effect
+  (referral accrual, treasury notice, oracle attestation) applies at most once
+  and can be replayed or recovered from its dead-letter queue safely.
 
 ## Why a job queue inside the contract
 

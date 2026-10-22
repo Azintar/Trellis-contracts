@@ -16,7 +16,7 @@ mod tests {
         let env = Env::default();
         let admin = Address::generate(&env);
         let actor = Address::generate(&env);
-        crate::auth::set_admin(&env, &admin).unwrap();
+        crate::auth::set_admin(&env, &admin);
         (env, admin, actor)
     }
 

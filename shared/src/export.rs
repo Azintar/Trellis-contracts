@@ -31,6 +31,7 @@
 //!
 //! See `docs/EXPORT.md` for the workflow, scope table, and maintainer runbook.
 
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
     contracterror, contracttype, symbol_short, Address, Bytes, BytesN, Env, IntoVal, String,
     Symbol, Val, Vec,
@@ -234,7 +235,7 @@ pub fn redact_fields(env: &Env, fields: &Vec<ExportField>) -> (Vec<ExportField>,
 ///
 /// Forbidden fields include secret material, raw nonces/entropy, private keys,
 /// credentials, and module-specific sensitive internal data.
-pub fn is_forbidden_field(field: &Symbol) -> bool {
+pub fn is_forbidden_field(env: &Env, field: &Symbol) -> bool {
     field == &symbol_short!("priv_key")
         || field == &symbol_short!("sec_key")
         || field == &symbol_short!("seed")
@@ -249,17 +250,17 @@ pub fn is_forbidden_field(field: &Symbol) -> bool {
         || field == &symbol_short!("admin_key")
         || field == &symbol_short!("res_seed")
         || field == &symbol_short!("raw_pii")
-        || field == &symbol_short!("ballot_slt")
+        || field == &Symbol::new(env, "ballot_slt")
         || field == &symbol_short!("sign_key")
         || field == &symbol_short!("raw_nonce")
         || field == &symbol_short!("ip_addr")
 }
 
 /// Checks whether any field in `fields` is forbidden.
-pub fn contains_forbidden_fields(fields: &Vec<ExportField>) -> bool {
+pub fn contains_forbidden_fields(env: &Env, fields: &Vec<ExportField>) -> bool {
     for i in 0..fields.len() {
         if let Some(f) = fields.get(i) {
-            if is_forbidden_field(&f.name) {
+            if is_forbidden_field(env, &f.name) {
                 return true;
             }
         }
@@ -275,7 +276,7 @@ pub fn purge_forbidden_fields(env: &Env, fields: &Vec<ExportField>) -> (Vec<Expo
         let Some(f) = fields.get(i) else {
             continue;
         };
-        if is_forbidden_field(&f.name) {
+        if is_forbidden_field(env, &f.name) {
             purged = purged.saturating_add(1);
         } else {
             safe.push_back(f);

@@ -26,9 +26,8 @@ use crate::storage::{persistent_get, persistent_set};
 // Error Taxonomy (Range 980–989)
 // ---------------------------------------------------------------------------
 
-#[contracterror]
+#[contracttype]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
 pub enum DegradationError {
     /// Dependency is completely offline; non-fallback operation blocked.
     DependencyDown = 980,
@@ -354,7 +353,7 @@ pub fn register_dependency_entry(
 ) -> Result<(), Error> {
     require_admin(env, admin)?;
     let key = dependency_key(entry.module, entry.dependency);
-    persistent_set(env, &MatrixStorageKey::Entry(key), &entry);
+    persistent_set(env, &MatrixStorageKey::Entry(key.clone()), &entry);
 
     let mut keys: Vec<Symbol> =
         persistent_get(env, &MatrixStorageKey::DependencyList).unwrap_or_else(|| Vec::new(env));
@@ -399,7 +398,7 @@ pub fn initialize_standard_matrix(env: &Env, admin: &Address) -> Result<u32, Err
     for (m, d) in modules_and_deps.iter() {
         let entry = default_matrix_entry(*m, *d, ledger);
         let key = dependency_key(*m, *d);
-        persistent_set(env, &MatrixStorageKey::Entry(key), &entry);
+        persistent_set(env, &MatrixStorageKey::Entry(key.clone()), &entry);
 
         let mut keys: Vec<Symbol> =
             persistent_get(env, &MatrixStorageKey::DependencyList).unwrap_or_else(|| Vec::new(env));
@@ -516,7 +515,7 @@ pub fn record_dependency_check(
     }
 
     entry.last_updated_ledger = current_ledger;
-    persistent_set(env, &MatrixStorageKey::Entry(key), &entry);
+    persistent_set(env, &MatrixStorageKey::Entry(key.clone()), &entry);
 
     entry.current_level
 }
@@ -541,7 +540,7 @@ pub fn recover_dependency(
     entry.current_level = DegradationLevel::Nominal;
     entry.consecutive_healthy_count = entry.recovery_success_threshold;
     entry.last_updated_ledger = current_ledger;
-    persistent_set(env, &MatrixStorageKey::Entry(key), &entry);
+    persistent_set(env, &MatrixStorageKey::Entry(key.clone()), &entry);
 
     set_dependency_health(env, &dependency.as_symbol(), DependencyStatus::Healthy);
 

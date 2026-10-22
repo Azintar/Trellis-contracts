@@ -56,6 +56,7 @@
 | [shared/README.md](shared/README.md) | Shared library utilities and helpers |
 | [security/README.md](security/README.md) | Security model and access control overview |
 | [docs/WORKERS.md](docs/WORKERS.md) | Background worker framework: job lifecycle, retry policy, dead letters, local runner |
+| [docs/SIDE_EFFECTS.md](docs/SIDE_EFFECTS.md) | Idempotent side-effect dispatcher: keyed effects, exactly-once application, replay, and dead-letter recovery runbook |
 | [docs/PROGRESSIVE_DISCLOSURE.md](docs/PROGRESSIVE_DISCLOSURE.md) | Advanced transaction detail fields, and why critical warnings can't end up advanced-only |
 | [docs/CHANGELOG_SCHEMA.md](docs/CHANGELOG_SCHEMA.md) | The machine-readable changelog (`changelog/entries.json`): schema, validation, when an entry is required |
 | [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) | The PR checklist, what's automated vs. reviewer judgment, and the emergency-fix exception process |

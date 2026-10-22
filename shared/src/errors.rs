@@ -56,6 +56,8 @@ pub enum Error {
     TransferAlreadyPending = 40,
     /// An external dependency is degraded or unavailable and safe fallback behavior was triggered or required.
     DependencyDegraded = 41,
+    /// The request conflicts with the current state of the resource.
+    Conflict = 42,
     /// The proposal was not found.
     ProposalNotFound = 12,
     /// The caller has already approved this proposal.
