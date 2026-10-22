@@ -11,12 +11,8 @@
 //!   updated, skipped, and invalid records with zero storage mutations.
 //! - [`BackfillCheckpoint`] — persisted progress record enabling safe resumption
 //!   from interruptions without repeating side effects.
-//! - [`dedupe_items`] — applies a [`BackfillDuplicatePolicy`] to repeated record
-//!   ids before a batch is previewed or applied.
 //! - [`advance_checkpoint`] / [`fail_backfill`] / [`complete_backfill`] — state
 //!   transitions enforcing deterministic ordering and recovery.
-//! - [`resume_backfill`] — continues an `InProgress` or `AwaitingRecovery`
-//!   checkpoint from its stored cursor.
 
 use soroban_sdk::{contracterror, contracttype, symbol_short, Env, String, Symbol, Vec};
 
@@ -46,10 +42,6 @@ pub enum BackfillError {
     InvariantViolation = 966,
     /// The checkpoint is in a terminal state and cannot be resumed.
     CannotResume = 967,
-    /// A batch contains the same record id more than once and the policy rejects it.
-    DuplicateRecord = 968,
-    /// A checkpoint awaits recovery; it must be resumed, not replaced by a new run.
-    ResumeRequired = 969,
 }
 
 /// Target contract module for backfill operations.
@@ -85,18 +77,6 @@ pub enum BackfillMode {
     AllOrNothing,
     /// Resilient: Invalid records are reported and skipped while valid records proceed.
     BestEffort,
-}
-
-/// How repeated record ids inside one batch are handled before dry-run or apply.
-#[contracttype]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BackfillDuplicatePolicy {
-    /// Keep the first occurrence of an id and drop later duplicates.
-    Skip,
-    /// Keep the last occurrence of an id, at the position of its first occurrence.
-    Update,
-    /// Refuse the whole batch when any id appears more than once.
-    Reject,
 }
 
 /// Lifecycle state of a backfill run.
@@ -241,46 +221,7 @@ pub fn clear_checkpoint(env: &Env) {
     instance_remove(env, &BACKFILL_CHECKPOINT_KEY);
 }
 
-/// Collapses repeated record ids according to `policy`.
-///
-/// Records are compared by [`BackfillItem::id`]. The first occurrence fixes the
-/// output position of each id, so the result is deterministic for a given input
-/// order. Under [`BackfillDuplicatePolicy::Reject`] the whole batch is refused
-/// with [`BackfillError::DuplicateRecord`] and no partial result is returned.
-pub fn dedupe_items(
-    env: &Env,
-    items: &Vec<BackfillItem>,
-    policy: BackfillDuplicatePolicy,
-) -> Result<Vec<BackfillItem>, BackfillError> {
-    let mut deduped: Vec<BackfillItem> = Vec::new(env);
-
-    for item in items.iter() {
-        let mut existing: Option<u32> = None;
-        for index in 0..deduped.len() {
-            if deduped.get(index).map_or(false, |seen| seen.id == item.id) {
-                existing = Some(index);
-                break;
-            }
-        }
-
-        match (existing, policy) {
-            (None, _) => deduped.push_back(item),
-            (Some(_), BackfillDuplicatePolicy::Skip) => {}
-            (Some(index), BackfillDuplicatePolicy::Update) => deduped.set(index, item),
-            (Some(_), BackfillDuplicatePolicy::Reject) => {
-                return Err(BackfillError::DuplicateRecord)
-            }
-        }
-    }
-
-    Ok(deduped)
-}
-
 /// Begins a backfill operation, initializing the checkpoint.
-///
-/// An `AwaitingRecovery` checkpoint is not overwritten: it still holds the
-/// cursor and counters for the interrupted run, so the caller must use
-/// [`resume_backfill`] instead.
 pub fn begin_backfill(
     env: &Env,
     plan: &BackfillPlan,
@@ -291,9 +232,6 @@ pub fn begin_backfill(
     if let Some(existing) = load_checkpoint(env) {
         if existing.status == BackfillStatus::InProgress {
             return Err(BackfillError::AlreadyInProgress);
-        }
-        if existing.status == BackfillStatus::AwaitingRecovery {
-            return Err(BackfillError::ResumeRequired);
         }
     }
 
@@ -335,14 +273,7 @@ pub fn advance_checkpoint(
         .saturating_add(batch_skipped)
         .saturating_add(batch_failed);
 
-    let cursor = checkpoint.cursor.saturating_add(processed);
-    if cursor > checkpoint.total_records {
-        // A replayed or oversized batch would count records that do not exist in
-        // the plan. Reject it before any counter changes are persisted.
-        return Err(BackfillError::RecordOutOfOrder);
-    }
-
-    checkpoint.cursor = cursor;
+    checkpoint.cursor = checkpoint.cursor.saturating_add(processed);
     checkpoint.created_count = checkpoint.created_count.saturating_add(batch_created);
     checkpoint.updated_count = checkpoint.updated_count.saturating_add(batch_updated);
     checkpoint.skipped_count = checkpoint.skipped_count.saturating_add(batch_skipped);
@@ -390,37 +321,6 @@ pub fn complete_backfill(env: &Env, now: u64) -> Result<BackfillCheckpoint, Back
 pub fn is_resumable(checkpoint: &BackfillCheckpoint) -> bool {
     checkpoint.status == BackfillStatus::InProgress
         || checkpoint.status == BackfillStatus::AwaitingRecovery
-}
-
-/// Resumes an interrupted backfill from its persisted checkpoint.
-///
-/// The stored cursor and counters are kept, so records before the cursor are not
-/// processed again. Only `InProgress` and `AwaitingRecovery` checkpoints can be
-/// resumed; terminal checkpoints return [`BackfillError::CannotResume`]. The
-/// checkpoint's module must match `plan`, otherwise the call returns
-/// [`BackfillError::InvalidPlan`].
-pub fn resume_backfill(
-    env: &Env,
-    plan: &BackfillPlan,
-    now: u64,
-) -> Result<BackfillCheckpoint, BackfillError> {
-    plan.validate()?;
-
-    let mut checkpoint = load_checkpoint(env).ok_or(BackfillError::CheckpointNotFound)?;
-
-    if checkpoint.module != plan.module {
-        return Err(BackfillError::InvalidPlan);
-    }
-    if !is_resumable(&checkpoint) {
-        return Err(BackfillError::CannotResume);
-    }
-
-    checkpoint.status = BackfillStatus::InProgress;
-    checkpoint.last_error = 0;
-    checkpoint.updated_at = now;
-
-    save_checkpoint(env, &checkpoint);
-    Ok(checkpoint)
 }
 
 #[cfg(test)]
@@ -546,147 +446,6 @@ mod tests {
 
             clear_checkpoint(&env);
             assert!(load_checkpoint(&env).is_none());
-        });
-    }
-
-    fn sample_item(id: u64, action: BackfillAction) -> BackfillItem {
-        BackfillItem {
-            id,
-            action,
-            is_valid: true,
-            is_destructive: false,
-            reason: symbol_short!("sample"),
-        }
-    }
-
-    #[test]
-    fn dedupe_skip_keeps_first_occurrence() {
-        let env = Env::default();
-        let mut items = Vec::new(&env);
-        items.push_back(sample_item(1, BackfillAction::Create));
-        items.push_back(sample_item(2, BackfillAction::Update));
-        items.push_back(sample_item(1, BackfillAction::Skip));
-
-        let deduped = dedupe_items(&env, &items, BackfillDuplicatePolicy::Skip).unwrap();
-        assert_eq!(deduped.len(), 2);
-        assert_eq!(deduped.get(0).unwrap().action, BackfillAction::Create);
-        assert_eq!(deduped.get(1).unwrap().id, 2);
-    }
-
-    #[test]
-    fn dedupe_update_keeps_last_occurrence_at_first_position() {
-        let env = Env::default();
-        let mut items = Vec::new(&env);
-        items.push_back(sample_item(1, BackfillAction::Create));
-        items.push_back(sample_item(2, BackfillAction::Update));
-        items.push_back(sample_item(1, BackfillAction::Skip));
-
-        let deduped = dedupe_items(&env, &items, BackfillDuplicatePolicy::Update).unwrap();
-        assert_eq!(deduped.len(), 2);
-        assert_eq!(deduped.get(0).unwrap().id, 1);
-        assert_eq!(deduped.get(0).unwrap().action, BackfillAction::Skip);
-        assert_eq!(deduped.get(1).unwrap().id, 2);
-    }
-
-    #[test]
-    fn dedupe_reject_refuses_batch_with_any_duplicate() {
-        let env = Env::default();
-        let mut items = Vec::new(&env);
-        items.push_back(sample_item(1, BackfillAction::Create));
-        items.push_back(sample_item(1, BackfillAction::Create));
-
-        assert_eq!(
-            dedupe_items(&env, &items, BackfillDuplicatePolicy::Reject).err(),
-            Some(BackfillError::DuplicateRecord)
-        );
-
-        // A batch with unique ids passes through unchanged under Reject.
-        let mut unique = Vec::new(&env);
-        unique.push_back(sample_item(1, BackfillAction::Create));
-        unique.push_back(sample_item(2, BackfillAction::Create));
-        let passed = dedupe_items(&env, &unique, BackfillDuplicatePolicy::Reject).unwrap();
-        assert_eq!(passed.len(), 2);
-    }
-
-    #[test]
-    fn begin_is_refused_while_awaiting_recovery_and_resume_continues_cursor() {
-        let env = Env::default();
-        let contract = env.register_contract(None, DummyContract);
-
-        env.as_contract(&contract, || {
-            let plan = sample_plan(&env, BackfillMode::BestEffort);
-            begin_backfill(&env, &plan, 100).unwrap();
-            advance_checkpoint(&env, 2, 0, 0, 0, 101).unwrap();
-            fail_backfill(&env, 966, 102).unwrap();
-
-            assert_eq!(
-                begin_backfill(&env, &plan, 103).err(),
-                Some(BackfillError::ResumeRequired)
-            );
-
-            let resumed = resume_backfill(&env, &plan, 104).unwrap();
-            assert_eq!(resumed.status, BackfillStatus::InProgress);
-            assert_eq!(resumed.cursor, 2);
-            assert_eq!(resumed.created_count, 2);
-            assert_eq!(resumed.last_error, 0);
-            assert_eq!(resumed.updated_at, 104);
-
-            clear_checkpoint(&env);
-        });
-    }
-
-    #[test]
-    fn resume_rejects_missing_terminal_and_mismatched_checkpoints() {
-        let env = Env::default();
-        let contract = env.register_contract(None, DummyContract);
-
-        env.as_contract(&contract, || {
-            let plan = sample_plan(&env, BackfillMode::BestEffort);
-            assert_eq!(
-                resume_backfill(&env, &plan, 100).err(),
-                Some(BackfillError::CheckpointNotFound)
-            );
-
-            begin_backfill(&env, &plan, 100).unwrap();
-            complete_backfill(&env, 101).unwrap();
-            assert_eq!(
-                resume_backfill(&env, &plan, 102).err(),
-                Some(BackfillError::CannotResume)
-            );
-
-            clear_checkpoint(&env);
-            begin_backfill(&env, &plan, 103).unwrap();
-            let mut other = sample_plan(&env, BackfillMode::BestEffort);
-            other.module = BackfillModule::Treasury;
-            assert_eq!(
-                resume_backfill(&env, &other, 104).err(),
-                Some(BackfillError::InvalidPlan)
-            );
-
-            clear_checkpoint(&env);
-        });
-    }
-
-    #[test]
-    fn advance_past_total_records_is_rejected_without_persisting() {
-        let env = Env::default();
-        let contract = env.register_contract(None, DummyContract);
-
-        env.as_contract(&contract, || {
-            let plan = sample_plan(&env, BackfillMode::BestEffort);
-            begin_backfill(&env, &plan, 100).unwrap();
-            advance_checkpoint(&env, 6, 4, 0, 0, 101).unwrap();
-
-            assert_eq!(
-                advance_checkpoint(&env, 1, 0, 0, 0, 102).err(),
-                Some(BackfillError::RecordOutOfOrder)
-            );
-
-            let stored = load_checkpoint(&env).unwrap();
-            assert_eq!(stored.cursor, 10);
-            assert_eq!(stored.created_count, 6);
-
-            clear_checkpoint(&env);
         });
     }
 }

@@ -3,6 +3,7 @@
 use crate::storage::persistent_set;
 use soroban_sdk::{contracterror, contracttype, Bytes, BytesN, Env};
 
+#[contracttype]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StateSnapshot {
     pub wallet_revision: u64,

@@ -43,7 +43,7 @@ use soroban_sdk::{contracttype, symbol_short, Env, Symbol};
 use crate::feature_flags::{
     emergency_disable, get_flag, FeatureFlag, FeatureFlagError, FULL_ROLLOUT_BPS,
 };
-use crate::storage::{instance_get, instance_remove, instance_set};
+use crate::storage::{instance_get, instance_set};
 
 // ---------------------------------------------------------------------------
 // Modules & Scoping
@@ -543,11 +543,6 @@ pub fn trigger_auto_rollback(
     config.stage = RolloutStage::RolledBack;
     config.updated_at = env.ledger().sequence();
     instance_set(env, &GuardStorageKey::Config(target), &config);
-
-    // A verification receipt only proves the state after the rollback it was
-    // issued for. Once a new rollback trips, that proof is stale, so drop it and
-    // require a fresh `verify_rollback` before the guard can be re-armed.
-    instance_remove(env, &GuardStorageKey::Receipt(target));
 
     // 2. Disable underlying feature flag if targeted
     if let RolloutTarget::Flag(flag) = target {
@@ -1061,37 +1056,6 @@ mod tests {
                 evaluate_rollout_guard(&env, target, 0),
                 GuardDecision::ProceedNew
             );
-        });
-    }
-
-    #[test]
-    fn stale_verification_does_not_authorize_a_second_rearm() {
-        let env = Env::default();
-        with_storage(&env, || {
-            let target = RolloutTarget::Flag(FeatureFlag::AidDisbursementV2);
-            let mut config = default_guard_config(&env);
-            config.enabled = true;
-            config.stage = RolloutStage::Canary;
-            config.rollout_bps = 500;
-            init_or_update_guard(&env, target, &config).unwrap();
-
-            // First rollback, verified clean, then re-armed.
-            trigger_auto_rollback(&env, target, RollbackReason::ManualTrigger, 0);
-            let clean = ModuleConsistencySnapshot::aid(true, true, true);
-            assert!(verify_rollback(&env, target, &clean).verified_clean);
-            rearm_after_verified_rollback(&env, target, RolloutStage::Canary, 500).unwrap();
-
-            // A second rollback makes the earlier receipt stale.
-            trigger_auto_rollback(&env, target, RollbackReason::ConsecutiveFailuresExceeded, 905);
-            assert!(!is_rollback_verified(&env, target));
-            assert_eq!(
-                rearm_after_verified_rollback(&env, target, RolloutStage::Canary, 500),
-                Err(FeatureFlagError::UnverifiedRollbackReenableForbidden)
-            );
-
-            // Re-arming succeeds only after the new rollback is verified.
-            assert!(verify_rollback(&env, target, &clean).verified_clean);
-            assert!(rearm_after_verified_rollback(&env, target, RolloutStage::Canary, 500).is_ok());
         });
     }
 

@@ -172,12 +172,6 @@ When `--resume` is invoked:
 3. All records before `cursor` or with keys in `processedKeys` are skipped immediately without executing duplicate network calls or mutations.
 4. Execution resumes from `cursor`, updating the checkpoint every batch until all items complete.
 
-### Engine guarantees (`shared::backfill`)
-- `resume_backfill(env, plan, now)` continues an `InProgress` or `AwaitingRecovery` checkpoint and keeps its cursor and counters. It returns `CannotResume` for `Completed` or `RolledBack` checkpoints, `CheckpointNotFound` when none exists, and `InvalidPlan` when the module differs.
-- `begin_backfill` refuses to overwrite an `AwaitingRecovery` checkpoint and returns `ResumeRequired`, so an interrupted run cannot be silently discarded.
-- `advance_checkpoint` rejects a batch that would push the cursor past `total_records` with `RecordOutOfOrder`, and persists nothing. A replayed batch therefore cannot inflate the counters.
-- `dedupe_items(env, items, policy)` applies `--duplicate-policy` to repeated record ids before dry-run or apply. `Skip` keeps the first occurrence, `Update` keeps the last at the first position, and `Reject` refuses the batch with `DuplicateRecord`.
-
 ---
 
 ## 5. Operational Edge Cases & Failure Modes

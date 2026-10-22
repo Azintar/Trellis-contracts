@@ -440,48 +440,6 @@ pub struct AuditLedgerExport {
     pub has_more: bool,
 }
 
-/// Proof issued to the administrator who performed a privileged change.
-///
-/// The receipt pins the position and hash of the entry it describes. Holders
-/// check it with [`verify_admin_receipt`], which reads the live chain, so the
-/// proof stands on the ledger itself and any later edit to that entry is
-/// detected.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AdminChangeReceipt {
-    /// Sequence number of the recorded entry.
-    pub seq: u64,
-    /// The privileged event that was recorded.
-    pub kind: AuditEventKind,
-    /// Authenticated administrator who performed the change.
-    pub actor: Address,
-    /// Hash of the recorded entry.
-    pub entry_hash: BytesN<32>,
-    /// Hash of the entry before it, or [`genesis_hash`] for the first entry.
-    pub prev_hash: BytesN<32>,
-    /// Ledger sequence at which the change was recorded.
-    pub ledger: u32,
-    /// Ledger timestamp at which the change was recorded.
-    pub timestamp: u64,
-}
-
-/// Result of checking an [`AdminChangeReceipt`] against the live ledger.
-#[contracttype]
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AdminReceiptStatus {
-    /// The recorded entry is in the live chain and matches the receipt.
-    Valid = 0,
-    /// No entry exists at the receipt's sequence, or a later link is missing.
-    Missing = 1,
-    /// The stored entry differs from the receipt, or its own hash does not verify.
-    Mismatch = 2,
-    /// Entries after the receipt do not link forward to the current head.
-    Unlinked = 3,
-    /// The receipt is further behind the head than one call may verify.
-    ScanLimitExceeded = 4,
-}
-
 // ---------------------------------------------------------------------------
 // Hashing
 // ---------------------------------------------------------------------------
@@ -1082,81 +1040,6 @@ pub fn append_privileged(
             correlation_id: genesis_hash(env),
         },
     )
-}
-
-/// Records a privileged change and returns the receipt for its administrator.
-///
-/// Follows the same class and ordering rules as [`append_privileged`]. The
-/// receipt is the evidence the administrator keeps; [`verify_admin_receipt`]
-/// later checks it against the chain.
-pub fn record_admin_change(
-    env: &Env,
-    kind: AuditEventKind,
-    module: Symbol,
-    actor: Address,
-    subject: Option<Address>,
-    attribute: Option<Symbol>,
-    note: Option<Symbol>,
-) -> Result<AdminChangeReceipt, Error> {
-    let entry = append_privileged(env, kind, module, actor, subject, attribute, note)?;
-
-    Ok(AdminChangeReceipt {
-        seq: entry.seq,
-        kind: entry.kind,
-        actor: entry.actor,
-        entry_hash: entry.hash,
-        prev_hash: entry.prev_hash,
-        ledger: entry.ledger,
-        timestamp: entry.timestamp,
-    })
-}
-
-/// Checks an admin-change receipt against the live chain.
-///
-/// Returns [`AdminReceiptStatus::Valid`] only when the entry at `receipt.seq`
-/// still matches the receipt, recomputes to its own stored hash, and every later
-/// entry links forward to the current head. The forward walk is bounded by
-/// [`MAX_VERIFY_ENTRIES`]; older receipts return `ScanLimitExceeded`.
-pub fn verify_admin_receipt(env: &Env, receipt: &AdminChangeReceipt) -> AdminReceiptStatus {
-    let current = head(env);
-
-    if receipt.seq == 0 || receipt.seq > current.length {
-        return AdminReceiptStatus::Missing;
-    }
-    if current.length - receipt.seq > MAX_VERIFY_ENTRIES {
-        return AdminReceiptStatus::ScanLimitExceeded;
-    }
-
-    let entry = match get_entry(env, receipt.seq) {
-        Some(entry) => entry,
-        None => return AdminReceiptStatus::Missing,
-    };
-    if entry.seq != receipt.seq
-        || entry.kind != receipt.kind
-        || entry.actor != receipt.actor
-        || entry.hash != receipt.entry_hash
-        || entry.prev_hash != receipt.prev_hash
-        || entry_hash(env, &entry) != entry.hash
-    {
-        return AdminReceiptStatus::Mismatch;
-    }
-
-    let mut expected_prev = entry.hash;
-    for seq in (receipt.seq + 1)..=current.length {
-        let next = match get_entry(env, seq) {
-            Some(next) => next,
-            None => return AdminReceiptStatus::Missing,
-        };
-        if next.prev_hash != expected_prev || entry_hash(env, &next) != next.hash {
-            return AdminReceiptStatus::Unlinked;
-        }
-        expected_prev = next.hash;
-    }
-
-    if expected_prev != current.head_hash {
-        return AdminReceiptStatus::Unlinked;
-    }
-    AdminReceiptStatus::Valid
 }
 
 /// Convenience wrapper for financial events.
