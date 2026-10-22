@@ -54,6 +54,10 @@ pub enum Error {
     NotPendingOwner = 39,
     /// An ownership transfer is already pending.
     TransferAlreadyPending = 40,
+    /// The record or API payload contained an unknown or unrecognised field.
+    UnknownField = 41,
+    /// The record or API payload contained a deprecated or tombstoned field.
+    DeprecatedField = 42,
     /// The proposal was not found.
     ProposalNotFound = 12,
     /// The caller has already approved this proposal.

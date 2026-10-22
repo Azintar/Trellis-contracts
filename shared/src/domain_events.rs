@@ -42,7 +42,7 @@ pub fn validate_event(
     schema: &EventSchema,
     payload: &Map<Symbol, Val>,
 ) -> Result<(), EventValidationError> {
-    if schema.name.is_empty() {
+    if schema.name == soroban_sdk::symbol_short!("") {
         return Err(EventValidationError::EmptyName);
     }
     if schema.version == 0 {

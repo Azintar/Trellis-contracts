@@ -36,6 +36,7 @@ pub mod recovery;
 pub mod replay;
 pub mod retention;
 pub mod sanitize;
+pub mod schema_evolution;
 pub mod semantic;
 pub mod storage;
 pub mod stale_state;
@@ -86,6 +87,14 @@ pub use config::{
 };
 pub use domain_events::{consumer_version, publish_event, validate_event, DomainEvent, EventSchema,
     EventValidationError};
+pub use schema_evolution::{
+    build_aid_api_schema, build_aid_record_schema, build_governance_proposal_schema,
+    build_marketplace_listing_schema, build_oracle_submission_schema,
+    build_referral_record_schema, build_treasury_record_schema, ensure_version_compatible,
+    validate_fields, DeprecatedFieldPolicy, FieldDefinition, FieldStatus, MigrationStepNote,
+    PublicApiResponseEnvelope, SchemaEvolutionError, StoredRecordEnvelope, UnknownFieldPolicy,
+    VersionedSchema,
+};
 pub use dashboard::{
     add_external_reference, create_partial_failure, generate_dashboard,
     generate_enhanced_dashboard, group_by_age, group_by_operation_type, group_by_retryability,

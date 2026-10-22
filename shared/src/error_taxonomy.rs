@@ -252,6 +252,20 @@ fn shared_definition(code: u32) -> Option<Definition> {
             "This record format is not supported by the current service version.",
             Some("Contact a maintainer before retrying this operation."),
         ),
+        x if x == E::UnknownField as u32 => definition(
+            "UNKNOWN_FIELD",
+            ErrorCategory::Validation,
+            false,
+            "The record or API payload contained an unrecognized field.",
+            Some("Remove undocumented fields or upgrade client to a compatible schema version."),
+        ),
+        x if x == E::DeprecatedField as u32 => definition(
+            "DEPRECATED_FIELD",
+            ErrorCategory::Validation,
+            false,
+            "The record or API payload contained a deprecated or retired field.",
+            Some("Migrate payload to the active schema and drop deprecated fields."),
+        ),
         x if x == E::NotPaused as u32
             || x == E::NoChangeDetected as u32 =>
         {
