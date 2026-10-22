@@ -16,9 +16,10 @@ use soroban_sdk::{
 
 use crate::audit_ledger::{
     append_event, append_financial, append_privileged, checkpoint, entry_hash, export_digest,
-    export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint, verify_chain,
-    verify_export, AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerKey,
-    AuditVerificationFailure, AUDIT_LEDGER_SCHEMA_VERSION, MAX_EXPORT_LIMIT,
+    export_ledger, genesis_hash, get_entry, head, length, publish_head_checkpoint,
+    record_admin_change, verify_admin_receipt, verify_chain, verify_export, AdminReceiptStatus,
+    AuditEventKind, AuditEventParams, AuditLedgerEntry, AuditLedgerKey, AuditVerificationFailure,
+    AUDIT_LEDGER_SCHEMA_VERSION, MAX_EXPORT_LIMIT,
 };
 use crate::auth;
 use crate::errors::Error;
@@ -700,5 +701,166 @@ fn exported_bundle_for_an_empty_ledger_verifies() {
         assert_eq!(bundle.to_seq, 0);
         assert_eq!(bundle.ledger_length, 0);
         assert!(verify_export(&env, &bundle).verified);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Administrative change receipts
+// ---------------------------------------------------------------------------
+
+#[test]
+fn admin_receipt_stays_valid_while_later_entries_extend_the_chain() {
+    let env = Env::default();
+    let actor = Address::generate(&env);
+    let subject = Address::generate(&env);
+
+    with_ledger(&env, || {
+        append_at(&env, 10, 1_000, AuditEventKind::TreasuryDeposit, &actor);
+
+        env.ledger().set_sequence_number(11);
+        env.ledger().set_timestamp(1_100);
+        let receipt = record_admin_change(
+            &env,
+            AuditEventKind::RoleGranted,
+            symbol_short!("access"),
+            actor.clone(),
+            Some(subject),
+            Some(symbol_short!("admin")),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(receipt.seq, 2);
+        assert_eq!(receipt.kind, AuditEventKind::RoleGranted);
+        assert_eq!(receipt.actor, actor);
+        assert_eq!(receipt.entry_hash, get_entry(&env, 2).unwrap().hash);
+        assert_eq!(receipt.prev_hash, get_entry(&env, 1).unwrap().hash);
+        assert_eq!(receipt.ledger, 11);
+        assert_eq!(receipt.timestamp, 1_100);
+        assert_eq!(
+            verify_admin_receipt(&env, &receipt),
+            AdminReceiptStatus::Valid
+        );
+
+        append_at(&env, 12, 1_200, AuditEventKind::TreasuryWithdrawal, &actor);
+        append_at(&env, 13, 1_300, AuditEventKind::TreasuryDeposit, &actor);
+        assert_eq!(
+            verify_admin_receipt(&env, &receipt),
+            AdminReceiptStatus::Valid
+        );
+    });
+}
+
+#[test]
+fn admin_receipt_rejects_a_forged_recorded_entry() {
+    let env = Env::default();
+    let actor = Address::generate(&env);
+
+    with_ledger(&env, || {
+        env.ledger().set_sequence_number(10);
+        env.ledger().set_timestamp(1_000);
+        let receipt = record_admin_change(
+            &env,
+            AuditEventKind::ConfigChanged,
+            symbol_short!("config"),
+            actor.clone(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        // Rewrite the note without recomputing the hash: the entry no longer
+        // matches its own stored hash.
+        let mut forged = get_entry(&env, 1).unwrap();
+        forged.note = Some(symbol_short!("forged"));
+        persistent_set(&env, &AuditLedgerKey::Entry(1), &forged);
+
+        assert_eq!(
+            verify_admin_receipt(&env, &receipt),
+            AdminReceiptStatus::Mismatch
+        );
+    });
+}
+
+#[test]
+fn admin_receipt_detects_a_broken_link_after_the_receipt() {
+    let env = Env::default();
+    let actor = Address::generate(&env);
+
+    with_ledger(&env, || {
+        env.ledger().set_sequence_number(10);
+        env.ledger().set_timestamp(1_000);
+        let receipt = record_admin_change(
+            &env,
+            AuditEventKind::RoleRevoked,
+            symbol_short!("access"),
+            actor.clone(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        append_at(&env, 11, 1_100, AuditEventKind::TreasuryDeposit, &actor);
+
+        let mut tampered = get_entry(&env, 2).unwrap();
+        tampered.note = Some(symbol_short!("forged"));
+        persistent_set(&env, &AuditLedgerKey::Entry(2), &tampered);
+
+        assert_eq!(
+            verify_admin_receipt(&env, &receipt),
+            AdminReceiptStatus::Unlinked
+        );
+    });
+}
+
+#[test]
+fn admin_receipt_past_the_head_is_missing() {
+    let env = Env::default();
+    let actor = Address::generate(&env);
+
+    with_ledger(&env, || {
+        env.ledger().set_sequence_number(10);
+        env.ledger().set_timestamp(1_000);
+        let mut receipt = record_admin_change(
+            &env,
+            AuditEventKind::ContractPaused,
+            symbol_short!("pause"),
+            actor.clone(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        receipt.seq = 99;
+        assert_eq!(
+            verify_admin_receipt(&env, &receipt),
+            AdminReceiptStatus::Missing
+        );
+    });
+}
+
+#[test]
+fn admin_receipts_are_only_issued_for_privileged_kinds() {
+    let env = Env::default();
+    let actor = Address::generate(&env);
+
+    with_ledger(&env, || {
+        env.ledger().set_sequence_number(10);
+        env.ledger().set_timestamp(1_000);
+        assert_eq!(
+            record_admin_change(
+                &env,
+                AuditEventKind::TreasuryDeposit,
+                symbol_short!("treasury"),
+                actor.clone(),
+                None,
+                None,
+                None,
+            ),
+            Err(Error::InvalidArgument)
+        );
+        assert_eq!(length(&env), 0);
     });
 }

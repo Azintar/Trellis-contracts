@@ -425,3 +425,23 @@ prints `{"network":...,"pass":N,"fail":N,"checks":[...]}` and exits non-zero on
 any failure, so it can gate a post-deploy job. It is intentionally **not** part
 of the PR CI job set, because it requires a live network and a funded source
 identity.
+
+## 8. Local incident drill
+
+Run the incident drill before a release and after changing recovery or rollback
+procedures. It exercises import validation and rollback, deterministic recovery,
+release readiness, and the partial-failure dashboard used to report user
+impact. The drill uses local test fixtures only; it does not connect to an RPC
+endpoint or submit transactions.
+
+```bash
+./scripts/incident-drill.sh
+```
+
+The script stops at the first failed check. A failure means the documented
+recovery path is not verified: keep the affected deployment paused, capture the
+test output in the incident timeline, and follow the relevant triage section
+above. Do not treat a passing local drill as proof that a live deployment is
+healthy; use §7 for read-only deployment verification. See
+[`RECOVERY.md`](./RECOVERY.md) for recovery state transitions and audit
+requirements.
