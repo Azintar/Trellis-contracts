@@ -1667,4 +1667,3 @@ pub fn execute_projection_repairs(
 
     Ok(receipts)
 }
-

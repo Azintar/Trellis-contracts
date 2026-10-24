@@ -1,6 +1,6 @@
 # Cross-Service Contract Map: Domain Events & Integration Boundaries
 
-> **Resolves:** [#235](https://github.com/TRELLIS-STELLAR/Trellis-contracts/issues/235)  
+> **Resolves:** [#235](https://github.com/TRELLIS-STELLAR/Trellis-contracts/issues/235)
 > **Scope:** All contracts in the `contracts/` workspace — `aid-contract`, `oracle-contract`,
 > `payments-contract`, `governance-contract`, `nft-marketplace`, `access-control`,
 > `treasury-contract`, `referral-contract`, `registry-contract`, `upgradeability`,
@@ -330,7 +330,7 @@ pub fn distribute_reward(
 ) -> Result<(), Error>
 ```
 
-Callers: `referral-contract` (from `claim_rewards`), `oracle-contract` (from `slash_submitter`).  
+Callers: `referral-contract` (from `claim_rewards`), `oracle-contract` (from `slash_submitter`).
 Failure behavior: returns `Error::Unauthorized` if `caller` lacks `TreasuryManager` role.
 Both callers must handle this error and surface it rather than silently swallowing it.
 
@@ -345,7 +345,7 @@ pub fn accrue(
 ) -> Result<(), Error>
 ```
 
-Caller: `treasury-contract` (from `distribute_reward`). Called _after_ token transfer succeeds.  
+Caller: `treasury-contract` (from `distribute_reward`). Called _after_ token transfer succeeds.
 Failure behavior: `Error::ConfigMissing` when `TierConfig` not set. Treasury must handle this
 gracefully — a missing tier config is non-fatal and should be logged, not propagated as a treasury
 failure.

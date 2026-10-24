@@ -217,4 +217,3 @@ pub fn propagate_to_external_call(
     validate_correlation_context(&ext_ctx)?;
     Ok(ext_ctx)
 }
-

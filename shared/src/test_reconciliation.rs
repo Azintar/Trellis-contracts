@@ -696,5 +696,3 @@ fn test_paginated_reconciliation_bounding() {
     );
     assert_eq!(err, Err(ReconciliationError::InvalidPagination));
 }
-
-

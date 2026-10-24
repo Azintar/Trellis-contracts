@@ -210,4 +210,3 @@ fn authorization_path_unauthorized_worker_propagation_rejected() {
         Err(Error::Unauthorized)
     );
 }
-

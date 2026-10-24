@@ -134,7 +134,7 @@ let params = SessionParams {
 if is_being_impersonated(&env, &user_address) {
     // Get the current session
     if let Some(session) = get_current_impersonation(&env, &user_address) {
-        println!("User {} is being impersonated by {}", 
+        println!("User {} is being impersonated by {}",
             user_address, session.impersonator);
         println!("Session scope: {:?}", session.scope);
         println!("Expires at: {}", session.expires_at);

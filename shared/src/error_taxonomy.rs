@@ -1626,4 +1626,3 @@ mod tests {
         assert_eq!(reg_err.category, ErrorCategory::NotFound);
     }
 }
-

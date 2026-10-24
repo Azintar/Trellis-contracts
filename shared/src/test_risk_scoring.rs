@@ -230,4 +230,3 @@ mod tests {
         assert!(assessment.factors.iter().any(|f| f.factor_type == crate::risk_scoring::RiskFactorType::UnusualDormancy));
     }
 }
-

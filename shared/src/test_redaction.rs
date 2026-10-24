@@ -296,4 +296,3 @@ fn authorization_path_errors_do_not_leak_internal_state() {
     assert_eq!(info.category, ErrorCategory::Authorization);
     assert_eq!(info.retryable, false);
 }
-

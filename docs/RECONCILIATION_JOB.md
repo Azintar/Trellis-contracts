@@ -6,7 +6,7 @@ Across Trellis Soroban contracts — **Treasury**, **Aid**, **Referral**, **Gove
 1. **Canonical Source-of-Truth**: Immutable, authoritative state records written during foundational lifecycle events (e.g. reserve strategy positions, aid grants, multi-sig admin sets, verified oracle price submissions, NFT listings/auctions).
 2. **Derived Projections & Secondary Indexes**: Materialized aggregates, running balances, paginated search pages, reverse vanity lookups, and voting tallies created to support low-latency querying, off-chain indexing, and gas-efficient reads.
 
-Under conditions of high concurrency, partial transaction batch execution, storage TTL desynchronization, or historical upgrade migrations, derived projections can diverge from canonical truth. 
+Under conditions of high concurrency, partial transaction batch execution, storage TTL desynchronization, or historical upgrade migrations, derived projections can diverge from canonical truth.
 
 The **Reconciliation Job** (`shared::reconciliation`) resolves **Issue #238** by providing an automated, deterministic reconciliation and repair system with:
 - **Dry-run-first safety**: Dry-run scanning is the default and is strictly read-only, mutating zero storage bytes.

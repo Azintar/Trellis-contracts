@@ -1192,4 +1192,3 @@ mod malformed_argument_fuzz_tests {
         );
     }
 }
-
